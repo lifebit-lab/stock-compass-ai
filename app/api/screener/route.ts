@@ -1,69 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getCompanyInfo } from '@/lib/jquants'
+import { getFinancialData } from '@/lib/edinet'
 import type { ScreenerCondition, ScreenerResult } from '@/types/analysis'
 
-// J-Quantsから上場銘柄一覧を取得してフィルタリング
-async function getListedStocks(): Promise<Array<{ code: string; name: string; sector: string }>> {
-  const refreshToken = process.env.JQUANTS_REFRESH_TOKEN
-  if (!refreshToken) return []
-
-  const tokenRes = await fetch(
-    `https://api.jquants.com/v1/token/auth_refresh?refreshtoken=${refreshToken}`,
-    { method: 'POST' }
-  )
-  if (!tokenRes.ok) return []
-  const { idToken } = await tokenRes.json()
-
-  const res = await fetch('https://api.jquants.com/v1/listed/info', {
-    headers: { Authorization: `Bearer ${idToken}` },
-    next: { revalidate: 86400 },
-  })
-  if (!res.ok) return []
-
-  const data = await res.json()
-  return (data.info ?? []).map((s: { Code: string; CompanyName: string; Sector17CodeName: string }) => ({
-    code: s.Code,
-    name: s.CompanyName,
-    sector: s.Sector17CodeName,
-  }))
-}
+// 代表的な日本株銘柄コード（時価総額上位・各業種）
+const PRESET_CODES = [
+  '7203', '6758', '9984', '8306', '9432', // トヨタ・ソニー・SBG・三菱UFJ・NTT
+  '6861', '7974', '4063', '9433', '8058', // キーエンス・任天堂・信越化学・KDDI・三菱商事
+  '6367', '9022', '7751', '4502', '6954', // ダイキン・JR東海・キヤノン・武田・ファナック
+  '8031', '9020', '7267', '4661', '6981', // 三井物産・JR東日本・ホンダ・OLC・村田製
+  '8035', '4543', '2914', '9983', '6702', // 東京エレク・テルモ・JT・ファストリ・富士通
+]
 
 export async function POST(req: NextRequest) {
-  const conditions: ScreenerCondition = await req.json()
+  const body = await req.json()
+  const conditions: ScreenerCondition = body.conditions ?? body
+  const customCodes: string[] = body.codes ?? PRESET_CODES
 
-  // 全銘柄取得（キャッシュ活用）
-  const stocks = await getListedStocks()
+  // 最大30銘柄まで並行取得
+  const targets = customCodes.slice(0, 30)
 
-  // スクリーニング：財務データが必要なため、Supabaseのキャッシュを活用
-  // キャッシュにある銘柄のみをフィルタリング対象とする（Phase 1の制限）
-  const { createServiceClient } = await import('@/lib/supabase/server')
-  const supabase = await createServiceClient()
-
-  const { data: cachedAnalyses } = await supabase
-    .from('analysis_cache')
-    .select('stock_code, analysis_result, score, created_at')
-    .order('created_at', { ascending: false })
-
-  if (!cachedAnalyses || cachedAnalyses.length === 0) {
-    return NextResponse.json({
-      results: [],
-      message: '分析済み銘柄がまだありません。先に銘柄を検索してキャッシュを蓄積してください。',
+  const analyses = await Promise.allSettled(
+    targets.map(async code => {
+      const [company, financial] = await Promise.all([
+        getCompanyInfo(code),
+        getFinancialData(code),
+      ])
+      return { code, company, financial }
     })
-  }
-
-  // 銘柄ごとに最新のキャッシュのみを使用
-  const latestByCode = new Map<string, typeof cachedAnalyses[number]>()
-  for (const row of cachedAnalyses) {
-    if (!latestByCode.has(row.stock_code)) {
-      latestByCode.set(row.stock_code, row)
-    }
-  }
+  )
 
   const results: ScreenerResult[] = []
 
-  for (const [code, row] of latestByCode) {
-    const analysis = row.analysis_result as { financial: { roe: number; per: number; equityRatio: number; revenueGrowthRate: number; dividendYield: number; pbr: number; operatingMargin: number }; company: { name: string; sector: string } }
-    const f = analysis?.financial
-    if (!f) continue
+  for (const result of analyses) {
+    if (result.status !== 'fulfilled') continue
+    const { code, company, financial: f } = result.value
+    if (!company || !f) continue
 
     // 条件フィルタリング
     if (conditions.roe?.min !== undefined && f.roe < conditions.roe.min) continue
@@ -78,13 +50,24 @@ export async function POST(req: NextRequest) {
     if (conditions.pbr?.max !== undefined && (f.pbr <= 0 || f.pbr > conditions.pbr.max)) continue
     if (conditions.operatingMargin?.min !== undefined && f.operatingMargin < conditions.operatingMargin.min) continue
 
-    const stockInfo = stocks.find(s => s.code === code)
+    // 簡易スコア計算
+    let score = 0
+    if (f.roe >= 10) score += 20
+    else if (f.roe >= 5) score += 10
+    if (f.equityRatio >= 40) score += 20
+    else if (f.equityRatio >= 20) score += 10
+    if (f.revenueGrowthRate >= 5) score += 15
+    else if (f.revenueGrowthRate >= 0) score += 5
+    if (f.operatingCashFlow > 0) score += 15
+    if (f.dividendYield >= 3) score += 15
+    else if (f.dividendYield >= 1) score += 5
+    if (f.per > 0 && f.per <= 15) score += 15
 
     results.push({
       code,
-      name: analysis.company?.name ?? stockInfo?.name ?? code,
-      sector: analysis.company?.sector ?? stockInfo?.sector ?? '不明',
-      score: row.score,
+      name: company.name,
+      sector: company.sector,
+      score,
       roe: f.roe,
       per: f.per,
       equityRatio: f.equityRatio,
@@ -93,8 +76,7 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // スコア降順でソート
   results.sort((a, b) => b.score - a.score)
 
-  return NextResponse.json({ results: results.slice(0, 50) })
+  return NextResponse.json({ results })
 }
