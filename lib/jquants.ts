@@ -1,95 +1,76 @@
 import type { StockPrice, CompanyInfo } from '@/types/stock'
 
-const BASE_URL = 'https://api.jquants.com/v1'
+const BASE_URL = 'https://api.jquants.com/v2'
 
-let cachedIdToken: string | null = null
-let tokenExpiresAt: number = 0
-
-async function getIdToken(): Promise<string> {
-  if (cachedIdToken && Date.now() < tokenExpiresAt) {
-    return cachedIdToken
-  }
-
-  // リフレッシュトークンからIDトークンを取得（ボディで送信）
-  const res = await fetch(`${BASE_URL}/token/auth_refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken: process.env.JQUANTS_REFRESH_TOKEN }),
-  })
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    throw new Error(`J-Quants token refresh failed: ${res.status} ${body}`)
-  }
-
-  const data = await res.json()
-  cachedIdToken = data.idToken
-  // 24時間有効（余裕をみて23時間）
-  tokenExpiresAt = Date.now() + 23 * 60 * 60 * 1000
-  return cachedIdToken!
+function apiKey(): string {
+  const key = process.env.JQUANTS_API_KEY
+  if (!key) throw new Error('JQUANTS_API_KEY is not set')
+  return key
 }
 
 async function jquantsGet<T>(path: string, params?: Record<string, string>): Promise<T> {
-  const token = await getIdToken()
   const url = new URL(`${BASE_URL}${path}`)
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
   }
 
   const res = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${token}` },
-    next: { revalidate: 3600 }, // 1時間キャッシュ
+    headers: { 'x-api-key': apiKey() },
+    next: { revalidate: 3600 },
   })
 
   if (!res.ok) {
-    throw new Error(`J-Quants API error: ${res.status} ${path}`)
+    const body = await res.text().catch(() => '')
+    throw new Error(`J-Quants API error: ${res.status} ${path} ${body}`)
   }
 
   return res.json()
 }
 
-// 株価履歴を取得（直近200営業日）
+// 株価履歴を取得（直近300日）
 export async function getStockPrices(code: string): Promise<StockPrice[]> {
   const to = new Date()
   const from = new Date()
-  from.setDate(from.getDate() - 300) // 余裕を持って300日前から
+  from.setDate(from.getDate() - 300)
 
-  const data = await jquantsGet<{ daily_quotes: Array<{
-    Date: string
-    Open: number
-    High: number
-    Low: number
-    Close: number
-    Volume: number
-    AdjustmentClose: number
-  }> }>('/prices/daily_quotes', {
+  const fmt = (d: Date) => d.toISOString().split('T')[0]
+
+  const data = await jquantsGet<{ data: Array<{
+    d: string   // date
+    O: number   // open
+    H: number   // high
+    L: number   // low
+    C: number   // close
+    Vo: number  // volume
+    AC: number  // adjusted close
+  }> }>('/equities/bars/daily', {
     code,
-    from: from.toISOString().split('T')[0].replace(/-/g, ''),
-    to: to.toISOString().split('T')[0].replace(/-/g, ''),
+    from: fmt(from),
+    to: fmt(to),
   })
 
-  return (data.daily_quotes ?? []).map(q => ({
-    date: q.Date,
-    open: q.Open,
-    high: q.High,
-    low: q.Low,
-    close: q.Close,
-    volume: q.Volume,
-    adjustedClose: q.AdjustmentClose,
+  return (data.data ?? []).map(q => ({
+    date: q.d,
+    open: q.O,
+    high: q.H,
+    low: q.L,
+    close: q.C,
+    volume: q.Vo,
+    adjustedClose: q.AC,
   }))
 }
 
 // 企業情報を取得
 export async function getCompanyInfo(code: string): Promise<CompanyInfo | null> {
-  const data = await jquantsGet<{ info: Array<{
+  const data = await jquantsGet<{ data: Array<{
     Code: string
     CompanyName: string
     Sector17CodeName: string
     MarketCapitalization: number
     MarketCode: string
-  }> }>('/listed/info', { code })
+  }> }>('/equities/master', { code })
 
-  const info = data.info?.[0]
+  const info = data.data?.[0]
   if (!info) return null
 
   return {
@@ -103,5 +84,5 @@ export async function getCompanyInfo(code: string): Promise<CompanyInfo | null> 
 
 // 日経平均の直近データ取得（下落理由判定用）
 export async function getNikkeiPrices(): Promise<StockPrice[]> {
-  return getStockPrices('0000') // 日経225インデックスコード
+  return getStockPrices('0000').catch(() => [])
 }

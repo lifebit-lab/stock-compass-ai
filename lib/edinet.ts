@@ -70,36 +70,25 @@ export async function getFinancialData(stockCode: string): Promise<FinancialData
 }
 
 async function getFinancialFromJQuants(code: string): Promise<FinancialData> {
-  // J-Quants /fins/statements APIを使用（無料プラン対応）
-  const idToken = await getJQuantsToken()
-  if (!idToken) return getDefaultFinancialData()
+  const apiKey = process.env.JQUANTS_API_KEY
+  if (!apiKey) return getDefaultFinancialData()
 
   const res = await fetch(
-    `https://api.jquants.com/v1/fins/statements?code=${code}`,
+    `https://api.jquants.com/v2/fins/summary?code=${code}`,
     {
-      headers: { Authorization: `Bearer ${idToken}` },
-      next: { revalidate: 86400 }, // 24時間キャッシュ
+      headers: { 'x-api-key': apiKey },
+      next: { revalidate: 86400 },
     }
   )
 
   if (!res.ok) return getDefaultFinancialData()
 
   const data = await res.json()
-  const statements: Array<Record<string, string | number>> = data.statements ?? []
+  const statements: Array<Record<string, string | number>> = data.data ?? []
 
   if (statements.length === 0) return getDefaultFinancialData()
 
-  // 直近3期分のデータを取得
-  const annual = statements
-    .filter(s => s.TypeOfDocument === '非連結財務諸表、XBRL' || s.TypeOfDocument?.toString().includes('Annual'))
-    .slice(0, 3)
-
-  if (annual.length === 0) {
-    // 決算期を問わず最新3件を使用
-    const latest = statements.slice(0, 3)
-    return parseStatements(latest)
-  }
-
+  const annual = statements.slice(0, 3)
   return parseStatements(annual)
 }
 
@@ -184,21 +173,3 @@ function getDefaultFinancialData(): FinancialData {
   }
 }
 
-// J-Quantsトークン取得（循環importを避けるため直接実装）
-async function getJQuantsToken(): Promise<string | null> {
-  try {
-    const res = await fetch(
-      `https://api.jquants.com/v1/token/auth_refresh`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: process.env.JQUANTS_REFRESH_TOKEN }),
-      }
-    )
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.idToken ?? null
-  } catch {
-    return null
-  }
-}
