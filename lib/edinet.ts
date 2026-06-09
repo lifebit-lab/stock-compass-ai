@@ -188,8 +188,12 @@ function getDefaultFinancialData(): FinancialData {
 async function getJQuantsToken(): Promise<string | null> {
   try {
     const res = await fetch(
-      `https://api.jquants.com/v1/token/auth_refresh?refreshtoken=${process.env.JQUANTS_REFRESH_TOKEN}`,
-      { method: 'POST' }
+      `https://api.jquants.com/v1/token/auth_refresh`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: process.env.JQUANTS_REFRESH_TOKEN }),
+      }
     )
     if (!res.ok) return null
     const data = await res.json()

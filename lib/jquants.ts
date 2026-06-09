@@ -10,13 +10,16 @@ async function getIdToken(): Promise<string> {
     return cachedIdToken
   }
 
-  // リフレッシュトークンからIDトークンを取得
-  const res = await fetch(`${BASE_URL}/token/auth_refresh?refreshtoken=${process.env.JQUANTS_REFRESH_TOKEN}`, {
+  // リフレッシュトークンからIDトークンを取得（ボディで送信）
+  const res = await fetch(`${BASE_URL}/token/auth_refresh`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken: process.env.JQUANTS_REFRESH_TOKEN }),
   })
 
   if (!res.ok) {
-    throw new Error(`J-Quants token refresh failed: ${res.status}`)
+    const body = await res.text().catch(() => '')
+    throw new Error(`J-Quants token refresh failed: ${res.status} ${body}`)
   }
 
   const data = await res.json()
