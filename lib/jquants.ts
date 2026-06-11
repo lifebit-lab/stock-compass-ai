@@ -64,10 +64,9 @@ export async function getStockPrices(code: string): Promise<StockPrice[]> {
 export async function getCompanyInfo(code: string): Promise<CompanyInfo | null> {
   const data = await jquantsGet<{ data: Array<{
     Code: string
-    CompanyName: string
-    Sector17CodeName: string
-    MarketCapitalization: number
-    MarketCode: string
+    CoName: string
+    S17Nm: string
+    MktNm: string
   }> }>('/equities/master', { code })
 
   const info = data.data?.[0]
@@ -75,10 +74,10 @@ export async function getCompanyInfo(code: string): Promise<CompanyInfo | null> 
 
   return {
     code: info.Code,
-    name: info.CompanyName,
-    sector: info.Sector17CodeName,
-    marketCapitalization: info.MarketCapitalization,
-    exchange: info.MarketCode,
+    name: info.CoName,
+    sector: info.S17Nm,
+    marketCapitalization: 0, // V2 /equities/master では提供なし
+    exchange: info.MktNm,
   }
 }
 

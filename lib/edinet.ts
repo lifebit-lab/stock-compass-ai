@@ -102,17 +102,28 @@ function parseStatements(statements: Array<Record<string, string | number>>): Fi
   const prev = statements[1] ?? {}
   const prev2 = statements[2] ?? {}
 
-  const netSales = toNum(latest.NetSales)
-  const netSalesPrev = toNum(prev.NetSales)
-  const netSalesPrev2 = toNum(prev2.NetSales)
+  // J-Quants V2 fins/summary フィールド名
+  const netSales = toNum(latest.Sales)
+  const netSalesPrev = toNum(prev.Sales)
+  const netSalesPrev2 = toNum(prev2.Sales)
 
-  const operatingProfit = toNum(latest.OperatingProfit)
-  const operatingProfitPrev = toNum(prev.OperatingProfit)
+  const operatingProfit = toNum(latest.OP)
+  const operatingProfitPrev = toNum(prev.OP)
 
-  const equity = toNum(latest.Equity)
-  const totalAssets = toNum(latest.TotalAssets)
-  const netIncome = toNum(latest.NetIncome)
-  const netIncomePrev = toNum(prev.NetIncome)
+  const netIncome = toNum(latest.NP)
+  const netIncomePrev = toNum(prev.NP)
+  const eps = toNum(latest.EPS)
+  const epsPrev = toNum(prev.EPS)
+
+  // EqAR は0〜1の小数（例: 0.38 = 38%）
+  const equityRatio = toNum(latest.EqAR) * 100
+  const equity = toNum(latest.Eq)
+  const totalAssets = toNum(latest.TA)
+  const operatingCashFlow = toNum(latest.CFO)
+
+  const divPerShare = toNum(latest.DivAnn)
+  // PayoutRatioAnn はパーセント値（例: 30.0 = 30%）
+  const payoutRatio = toNum(latest.PayoutRatioAnn)
 
   const revenueGrowthRate = netSalesPrev > 0
     ? ((netSales - netSalesPrev) / netSalesPrev) * 100
@@ -122,33 +133,31 @@ function parseStatements(statements: Array<Record<string, string | number>>): Fi
     ? ((operatingProfit - operatingProfitPrev) / Math.abs(operatingProfitPrev)) * 100
     : 0
 
-  const epsGrowthRate = netIncomePrev > 0
-    ? ((netIncome - netIncomePrev) / Math.abs(netIncomePrev)) * 100
+  const epsGrowthRate = epsPrev > 0
+    ? ((eps - epsPrev) / Math.abs(epsPrev)) * 100
     : 0
 
   return {
     revenueGrowthRate,
     operatingProfitGrowthRate,
     epsGrowthRate,
-    equityRatio: totalAssets > 0 ? (equity / totalAssets) * 100 : 0,
-    interestBearingDebt: toNum(latest.InterestBearingDebt),
-    operatingCashFlow: toNum(latest.CashFlowsFromOperatingActivities),
+    equityRatio,
+    interestBearingDebt: 0, // V2 fins/summary では提供なし
+    operatingCashFlow,
     roe: equity > 0 ? (netIncome / equity) * 100 : 0,
     roa: totalAssets > 0 ? (netIncome / totalAssets) * 100 : 0,
     operatingMargin: netSales > 0 ? (operatingProfit / netSales) * 100 : 0,
-    dividendYield: toNum(latest.DividendYield),
-    payoutRatio: netIncome > 0
-      ? (toNum(latest.DividendsPerShare) / (netIncome / Math.max(toNum(latest.NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStock), 1))) * 100
-      : 0,
-    per: toNum(latest.PriceEarningsRatio),
-    pbr: toNum(latest.PriceBookValueRatio),
+    dividendYield: 0,  // 株価が必要 → API側で算出
+    payoutRatio,
+    per: 0,            // EPS/株価が必要 → API側で算出
+    pbr: 0,            // BPS/株価が必要 → API側で算出
     revenue: [netSales, netSalesPrev, netSalesPrev2],
-    operatingProfit: [operatingProfit, operatingProfitPrev, toNum(prev2.OperatingProfit)],
-    dividendHistory: [
-      toNum(latest.DividendsPerShare),
-      toNum(prev.DividendsPerShare),
-      toNum(prev2.DividendsPerShare),
-    ],
+    operatingProfit: [operatingProfit, operatingProfitPrev, toNum(prev2.OP)],
+    dividendHistory: [divPerShare, toNum(prev.DivAnn), toNum(prev2.DivAnn)],
+    // 計算用中間値
+    eps,
+    bps: toNum(latest.BPS),
+    divPerShare,
   }
 }
 

@@ -27,6 +27,20 @@ export async function GET(
     return NextResponse.json({ error: '銘柄が見つかりませんでした' }, { status: 404 })
   }
 
+  // 直近株価でPER・PBR・配当利回りを算出
+  const latestPrice = stockPrices.at(-1)?.adjustedClose ?? stockPrices.at(-1)?.close ?? 0
+  if (latestPrice > 0 && financial) {
+    if (financial.eps && financial.eps > 0) {
+      financial.per = latestPrice / financial.eps
+    }
+    if (financial.bps && financial.bps > 0) {
+      financial.pbr = latestPrice / financial.bps
+    }
+    if (financial.divPerShare && financial.divPerShare > 0) {
+      financial.dividendYield = (financial.divPerShare / latestPrice) * 100
+    }
+  }
+
   const technical = calcTechnicalIndicators(stockPrices)
   const score = calcScore(financial, technical)
   const decline = analyzeDecline(stockPrices, nikkeiPrices, financial)

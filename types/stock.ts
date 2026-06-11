@@ -36,7 +36,11 @@ export interface FinancialData {
   per: number                      // PER（倍）
   pbr: number                      // PBR（倍）
   // 追加
-  revenue: number[]                // 直近3年売上（百万円）
-  operatingProfit: number[]        // 直近3年営業利益（百万円）
-  dividendHistory: number[]        // 直近3年配当
+  revenue: number[]                // 直近3年売上（円）
+  operatingProfit: number[]        // 直近3年営業利益（円）
+  dividendHistory: number[]        // 直近3年配当（円）
+  // 計算用中間値（API内部で使用）
+  eps?: number                     // EPS（円）
+  bps?: number                     // BPS（円）
+  divPerShare?: number             // 年間配当（円）
 }

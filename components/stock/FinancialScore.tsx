@@ -6,15 +6,23 @@ interface Props {
   financial: FinancialData
 }
 
-function MetricRow({ label, value, unit = '', good, warn }: {
+// 大きな金額を億円単位で表示
+function formatOkuYen(yen: number): string {
+  if (yen === 0) return '---'
+  const oku = yen / 100_000_000
+  return `${oku >= 0 ? '+' : ''}${oku.toLocaleString('ja-JP', { maximumFractionDigits: 0 })}億円`
+}
+
+function MetricRow({ label, value, unit = '', good, warn, format }: {
   label: string
   value: number
   unit?: string
   good: (v: number) => boolean
   warn: (v: number) => boolean
+  format?: (v: number) => string
 }) {
   const color = value === 0 ? 'text-muted-foreground' : good(value) ? 'text-emerald-600' : warn(value) ? 'text-yellow-600' : 'text-red-600'
-  const display = value === 0 ? '---' : `${value.toFixed(1)}${unit}`
+  const display = value === 0 ? '---' : format ? format(value) : `${value.toFixed(1)}${unit}`
 
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
@@ -47,7 +55,7 @@ export function FinancialScore({ financial: f }: Props) {
           <div className="mt-4 sm:mt-0">
             <p className="text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wide">安全性</p>
             <MetricRow label="自己資本比率" value={f.equityRatio} unit="%" good={v => v >= 40} warn={v => v >= 20} />
-            <MetricRow label="営業CF" value={f.operatingCashFlow} unit="百万円" good={v => v > 0} warn={() => false} />
+            <MetricRow label="営業CF" value={f.operatingCashFlow} good={v => v > 0} warn={() => false} format={formatOkuYen} />
           </div>
 
           {/* 収益性 */}
