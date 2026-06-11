@@ -84,5 +84,30 @@ export async function getCompanyInfo(code: string): Promise<CompanyInfo | null> 
 
 // 日経平均の直近データ取得（下落理由判定用）
 export async function getNikkeiPrices(): Promise<StockPrice[]> {
-  return getStockPrices('0000').catch(() => [])
+  const to = new Date()
+  const from = new Date()
+  from.setDate(from.getDate() - 30)
+  const fmt = (d: Date) => d.toISOString().split('T')[0]
+
+  const data = await jquantsGet<{ data: Array<{
+    d: string
+    O: number
+    H: number
+    L: number
+    C: number
+    Vo: number
+  }> }>('/indices/bars/daily', {
+    index_code: '0028', // 日経平均株価
+    from: fmt(from),
+    to: fmt(to),
+  }).catch(() => ({ data: [] }))
+
+  return (data.data ?? []).map(q => ({
+    date: q.d,
+    open: q.O,
+    high: q.H,
+    low: q.L,
+    close: q.C,
+    volume: q.Vo ?? 0,
+  }))
 }
