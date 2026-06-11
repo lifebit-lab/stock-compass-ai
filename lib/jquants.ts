@@ -46,7 +46,7 @@ export async function getStockPrices(code: string): Promise<StockPrice[]> {
   }> }>('/equities/bars/daily', {
     code,
     from: fmt(from),
-    to: fmt(to),
+    // toは指定しない → プランの最新利用可能日まで自動返却
   })
 
   return (data.data ?? []).map(q => ({
@@ -99,7 +99,7 @@ export async function getNikkeiPrices(): Promise<StockPrice[]> {
   }> }>('/indices/bars/daily', {
     index_code: '0028', // 日経平均株価
     from: fmt(from),
-    to: fmt(to),
+    // toは指定しない → プランの最新利用可能日まで自動返却
   }).catch(() => ({ data: [] }))
 
   return (data.data ?? []).map(q => ({
