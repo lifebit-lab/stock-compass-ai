@@ -88,7 +88,13 @@ async function getFinancialFromJQuants(code: string): Promise<FinancialData> {
 
   if (statements.length === 0) return getDefaultFinancialData()
 
-  const annual = statements.slice(0, 3)
+  // 最新期と同一の決算書タイプ（会計基準）のみで比較 → IFRS↔J-GAAP混在による異常成長率を防ぐ
+  const latestDocType = String(statements[0]?.DocType ?? '')
+  const sameStandard = latestDocType
+    ? statements.filter(s => String(s.DocType ?? '') === latestDocType)
+    : statements
+
+  const annual = sameStandard.slice(0, 3)
   return parseStatements(annual)
 }
 

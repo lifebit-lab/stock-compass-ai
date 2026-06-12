@@ -57,8 +57,9 @@ export function DeclineAnalysis({ decline }: Props) {
           </span>
         </div>
 
-        {/* 要因の内訳バー */}
+        {/* 要因の内訳バー（推定値） */}
         <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">推定寄与率（参考値）</p>
           {sortedCauses.map(([key, pct]) => (
             <div key={key} className="flex items-center gap-3">
               <span className="text-xs text-muted-foreground w-24 shrink-0">{causeLabels[key]}</span>
@@ -73,10 +74,13 @@ export function DeclineAnalysis({ decline }: Props) {
           ))}
         </div>
 
-        {/* AIコメント */}
+        {/* コメント */}
         <div className={`rounded-lg p-3 text-sm ${decline.isTemporary ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'}`}>
           {decline.summary}
         </div>
+        <p className="text-xs text-muted-foreground">
+          ※ 限られたデータによる統計的推定です。確定的な判断には決算書・業界動向等の確認を推奨します。
+        </p>
       </CardContent>
     </Card>
   )

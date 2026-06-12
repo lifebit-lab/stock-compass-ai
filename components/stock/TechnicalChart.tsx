@@ -34,11 +34,12 @@ export function TechnicalChart({ prices, technical }: Props) {
 
   const chartData = recent.map((p, i) => {
     const idx = offset + i
-    // 日付フォーマット: "20240320" → "03/20" or "2024-03-20" → "03/20"
+    // 日付フォーマット: "20240320" or "2024-03-20" → "24/03" (年/月)
     const raw = p.date ?? ''
-    const compact = raw.replace(/-/g, '') // ハイフンを除去
-    const mmdd = compact.length >= 8 ? compact.slice(4, 8) : raw
-    const dateLabel = mmdd.replace(/^(\d{2})(\d{2})$/, '$1/$2') || raw
+    const compact = raw.replace(/-/g, '')
+    const dateLabel = compact.length >= 8
+      ? compact.slice(2, 4) + '/' + compact.slice(4, 6)
+      : raw
     return {
       date: dateLabel,
       close: p.close,

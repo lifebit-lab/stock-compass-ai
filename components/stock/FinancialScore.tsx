@@ -13,21 +13,29 @@ function formatOkuYen(yen: number): string {
   return `${oku >= 0 ? '+' : ''}${oku.toLocaleString('ja-JP', { maximumFractionDigits: 0 })}億円`
 }
 
-function MetricRow({ label, value, unit = '', good, warn, format }: {
+function MetricRow({ label, value, unit = '', good, warn, format, extreme }: {
   label: string
   value: number
   unit?: string
   good: (v: number) => boolean
   warn: (v: number) => boolean
   format?: (v: number) => string
+  extreme?: boolean  // 異常値フラグ（会計基準変更等）
 }) {
-  const color = value === 0 ? 'text-muted-foreground' : good(value) ? 'text-emerald-600' : warn(value) ? 'text-yellow-600' : 'text-red-600'
+  const color = value === 0
+    ? 'text-muted-foreground'
+    : extreme
+    ? 'text-yellow-600'
+    : good(value) ? 'text-emerald-600' : warn(value) ? 'text-yellow-600' : 'text-red-600'
   const display = value === 0 ? '---' : format ? format(value) : `${value.toFixed(1)}${unit}`
 
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
       <span className="text-sm text-muted-foreground">{label}</span>
-      <span className={`text-sm font-medium ${color}`}>{display}</span>
+      <span className={`text-sm font-medium ${color}`}>
+        {display}
+        {extreme && <span className="text-xs text-yellow-600 ml-1">※</span>}
+      </span>
     </div>
   )
 }
@@ -46,9 +54,12 @@ export function FinancialScore({ financial: f }: Props) {
           {/* 成長性 */}
           <div>
             <p className="text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wide">成長性</p>
-            <MetricRow label="売上成長率" value={f.revenueGrowthRate} unit="%" good={v => v >= 5} warn={v => v >= 0} />
-            <MetricRow label="営業利益成長率" value={f.operatingProfitGrowthRate} unit="%" good={v => v >= 5} warn={v => v >= 0} />
-            <MetricRow label="EPS成長率" value={f.epsGrowthRate} unit="%" good={v => v >= 5} warn={v => v >= 0} />
+            <MetricRow label="売上成長率" value={f.revenueGrowthRate} unit="%" good={v => v >= 5 && v < 100} warn={v => v >= 0} extreme={Math.abs(f.revenueGrowthRate) > 100} />
+            <MetricRow label="営業利益成長率" value={f.operatingProfitGrowthRate} unit="%" good={v => v >= 5 && v < 100} warn={v => v >= 0} extreme={Math.abs(f.operatingProfitGrowthRate) > 100} />
+            <MetricRow label="EPS成長率" value={f.epsGrowthRate} unit="%" good={v => v >= 5 && v < 100} warn={v => v >= 0} extreme={Math.abs(f.epsGrowthRate) > 100} />
+            {(Math.abs(f.revenueGrowthRate) > 100 || Math.abs(f.epsGrowthRate) > 100) && (
+              <p className="text-xs text-yellow-600 mt-1">※会計基準変更等の影響で参考値となる場合があります</p>
+            )}
           </div>
 
           {/* 安全性 */}

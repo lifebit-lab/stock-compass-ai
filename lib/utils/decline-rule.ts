@@ -48,30 +48,36 @@ export function analyzeDecline(
   if (financial.equityRatio < 20) structuralScore += 20
   if (financial.roe < 0) structuralScore += 20
 
-  // スコアを正規化（最大100）
-  const total = marketScore + sectorScore + companyScore + structuralScore
-  const normalize = (v: number) => total > 0 ? Math.round((v / total) * 100) : 25
+  // 各要因に基準スコアを加算（データ不足時に1要因100%と断定されるのを防ぐ）
+  const BASE = 10
+  const adjMarket = marketScore + BASE
+  const adjSector = sectorScore + BASE
+  const adjCompany = companyScore + BASE
+  const adjStructural = structuralScore + BASE
+  const total = adjMarket + adjSector + adjCompany + adjStructural
 
   const causes = {
-    market: normalize(marketScore),
-    sector: normalize(sectorScore),
-    company: normalize(companyScore),
-    structural: normalize(structuralScore),
+    market: Math.round((adjMarket / total) * 100),
+    sector: Math.round((adjSector / total) * 100),
+    company: Math.round((adjCompany / total) * 100),
+    structural: Math.round((adjStructural / total) * 100),
   }
 
-  // 主要因を決定
-  const maxEntry = Object.entries(causes).sort((a, b) => b[1] - a[1])[0]
-  const primaryCause = maxEntry[0] as DeclineAnalysis['primaryCause']
+  // 主要因を決定（最もスコアが高い要因）
+  const maxEntry = Object.entries({ marketScore, sectorScore, companyScore, structuralScore })
+    .sort((a, b) => b[1] - a[1])[0]
+  const causeKey = maxEntry[0].replace('Score', '') as DeclineAnalysis['primaryCause']
+  const primaryCause = maxEntry[1] > 0 ? causeKey : 'unknown' as DeclineAnalysis['primaryCause']
 
-  // 一時的な下落かどうか（市場/業界/一時的企業要因が主因で構造的問題が低い場合）
-  const isTemporary = structuralScore < 30 && (marketScore + sectorScore + companyScore) > structuralScore
+  // 一時的な下落かどうか（構造的問題が相対的に小さい場合）
+  const isTemporary = structuralScore < 30 && structuralScore < (marketScore + sectorScore + companyScore)
 
   const summaryMap: Record<string, string> = {
-    market: `現在の下落は日経平均全体の調整局面に連動したものとみられます。企業価値そのものの毀損は確認されておらず、一時的な下落の可能性が高いです。`,
-    sector: `業界全体に影響する外部要因による下落が主因とみられます。個別企業の問題というよりも、セクター全体の調整局面にある可能性があります。`,
-    company: `直近の決算内容や企業固有の一時的な要因による下落が考えられます。中長期の事業基盤に変化がなければ回復が期待されます。`,
-    structural: `事業の構造的な課題（継続的な減収・CF悪化等）が確認されます。慎重な判断が必要です。`,
-    unknown: `下落の主因を特定するための十分なデータがありません。`,
+    market: `日経平均全体の調整局面との連動が主因と推定されます（※参考値）。企業固有のリスクも別途確認してください。`,
+    sector: `業界全体への影響が主因と推定されます（※参考値）。個別企業の問題かどうかは決算内容を確認してください。`,
+    company: `直近の決算など企業固有の要因が主因と推定されます（※参考値）。中長期の事業基盤の変化を確認してください。`,
+    structural: `継続的な減収・CF悪化など構造的な課題の兆候が確認されます（※参考値）。慎重な判断が必要です。`,
+    unknown: `下落の主因を特定するための十分なデータがありません。複数の要因を個別に確認してください。`,
   }
 
   return {
