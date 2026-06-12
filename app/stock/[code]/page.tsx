@@ -1,12 +1,17 @@
 import { notFound } from 'next/navigation'
-import type { StockAnalysis } from '@/types/analysis'
+import dynamic from 'next/dynamic'
 import { CompanyOverview } from '@/components/stock/CompanyOverview'
 import { FinancialScore } from '@/components/stock/FinancialScore'
-import { TechnicalChart } from '@/components/stock/TechnicalChart'
 import { DeclineAnalysis } from '@/components/stock/DeclineAnalysis'
 import { ExclusionWarning } from '@/components/stock/ExclusionWarning'
 import { ScoreCard } from '@/components/stock/ScoreCard'
 import { InvestmentStyle } from '@/components/stock/InvestmentStyle'
+
+// Recharts はSSR非対応のためdynamic importでSSRを無効化
+const TechnicalChart = dynamic(
+  () => import('@/components/stock/TechnicalChart').then(m => m.TechnicalChart),
+  { ssr: false, loading: () => <div className="h-64 rounded-lg bg-muted animate-pulse" /> }
+)
 import { getStockPrices, getCompanyInfo, getNikkeiPrices } from '@/lib/jquants'
 import { getFinancialData } from '@/lib/edinet'
 import { calcTechnicalIndicators } from '@/lib/utils/technical'
