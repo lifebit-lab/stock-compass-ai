@@ -49,7 +49,7 @@ export async function getStockPrices(code: string): Promise<StockPrice[]> {
       const high = Number(q.H ?? q.High ?? q.high ?? 0)
       const low = Number(q.L ?? q.Low ?? q.low ?? 0)
       const volume = Number(q.Vo ?? q.Volume ?? q.volume ?? 0)
-      const adjustedClose = Number(q.AC ?? q.AdjustmentClose ?? q.AdjClose ?? close)
+      const adjustedClose = Number(q.AdjC ?? q.AC ?? q.AdjustmentClose ?? q.AdjClose ?? close)
       return { date, open, high, low, close, volume, adjustedClose }
     })
     .filter(p => p.date !== '' && p.close > 0)

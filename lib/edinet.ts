@@ -122,8 +122,8 @@ function parseStatements(statements: Array<Record<string, string | number>>): Fi
   const operatingCashFlow = toNum(latest.CFO)
 
   const divPerShare = toNum(latest.DivAnn)
-  // PayoutRatioAnn はパーセント値（例: 30.0 = 30%）
-  const payoutRatio = toNum(latest.PayoutRatioAnn)
+  // PayoutRatioAnn は小数値（例: 0.204 = 20.4%）→ ×100 でパーセントに変換
+  const payoutRatio = toNum(latest.PayoutRatioAnn) * 100
 
   const revenueGrowthRate = netSalesPrev > 0
     ? ((netSales - netSalesPrev) / netSalesPrev) * 100

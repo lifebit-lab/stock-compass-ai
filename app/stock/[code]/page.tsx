@@ -50,6 +50,14 @@ export default async function StockPage({ params }: Props) {
     per: 0, pbr: 0, revenue: [0, 0, 0], operatingProfit: [0, 0, 0], dividendHistory: [0, 0, 0],
   }
 
+  // 直近株価でPER・PBR・配当利回りを算出
+  const latestPrice = stockPrices.at(-1)?.adjustedClose ?? stockPrices.at(-1)?.close ?? 0
+  if (latestPrice > 0) {
+    if (fin.eps && fin.eps > 0) fin.per = latestPrice / fin.eps
+    if (fin.bps && fin.bps > 0) fin.pbr = latestPrice / fin.bps
+    if (fin.divPerShare && fin.divPerShare > 0) fin.dividendYield = (fin.divPerShare / latestPrice) * 100
+  }
+
   const technical = calcTechnicalIndicators(stockPrices)
   const score = calcScore(fin, technical)
   const decline = analyzeDecline(stockPrices, nikkeiPrices, fin)
