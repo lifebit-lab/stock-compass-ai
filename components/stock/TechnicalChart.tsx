@@ -27,21 +27,41 @@ const trendLabels = {
   sideways: { label: 'もみ合い', color: 'bg-yellow-100 text-yellow-700' },
 }
 
+// 日付文字列を YYYYMMDD 8桁に正規化
+function toCompact(raw: string): string {
+  return raw ? raw.replace(/-/g, '') : ''
+}
+
+// YYYYMMDD → "YYYY/MM/DD"
+function toFullDate(compact: string): string {
+  if (compact.length < 8) return compact
+  return `${compact.slice(0, 4)}/${compact.slice(4, 6)}/${compact.slice(6, 8)}`
+}
+
+// YYYYMMDD → "MM/DD"
+function toMonthDay(compact: string): string {
+  if (compact.length < 8) return compact
+  return `${compact.slice(4, 6)}/${compact.slice(6, 8)}`
+}
+
 export function TechnicalChart({ prices, technical }: Props) {
   // 直近75件に絞る
   const recent = prices.slice(-75)
   const offset = prices.length - recent.length
 
+  // チャートに表示する期間ラベルを生成（年付き）
+  const firstCompact = toCompact(recent.at(0)?.date ?? '')
+  const lastCompact = toCompact(recent.at(-1)?.date ?? '')
+  const periodLabel = firstCompact && lastCompact
+    ? `${toFullDate(firstCompact)} 〜 ${toFullDate(lastCompact)}`
+    : ''
+
   const chartData = recent.map((p, i) => {
     const idx = offset + i
-    // 日付フォーマット: "20240320" or "2024-03-20" → "24/03" (年/月)
-    const raw = p.date ?? ''
-    const compact = raw.replace(/-/g, '')
-    const dateLabel = compact.length >= 8
-      ? compact.slice(2, 4) + '/' + compact.slice(4, 6)
-      : raw
+    const compact = toCompact(p.date ?? '')
     return {
-      date: dateLabel,
+      date: toMonthDay(compact),      // X軸表示用 MM/DD
+      fullDate: toFullDate(compact),  // ツールチップ用 YYYY/MM/DD
       close: p.close,
       volume: p.volume,
       ma25: isNaN(technical.ma25[idx]) ? undefined : Math.round(technical.ma25[idx]),
@@ -61,6 +81,9 @@ export function TechnicalChart({ prices, technical }: Props) {
           テクニカル分析
           <Badge className={`ml-auto text-xs ${trend.color} border-0`}>{trend.label}</Badge>
         </CardTitle>
+        {periodLabel && (
+          <p className="text-xs text-muted-foreground mt-0.5">{periodLabel}</p>
+        )}
       </CardHeader>
       <CardContent>
         {/* 指標サマリー */}
@@ -83,7 +106,13 @@ export function TechnicalChart({ prices, technical }: Props) {
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+              {/* dataKey=fullDateでtooltipに年付き日付を渡し、tickFormatterでMM/DDのみ表示 */}
+              <XAxis
+                dataKey="fullDate"
+                tick={{ fontSize: 10 }}
+                interval="preserveStartEnd"
+                tickFormatter={(v: string) => v.slice(5)}
+              />
               <YAxis tick={{ fontSize: 10 }} width={50} domain={['auto', 'auto']} />
               <Tooltip
                 contentStyle={{ fontSize: 12 }}
