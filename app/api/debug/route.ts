@@ -22,13 +22,29 @@ export async function GET() {
   const fins = await finsRes.json().catch(() => ({ error: finsRes.status }))
   const bars = await barsRes.json().catch(() => ({ error: barsRes.status }))
 
+  // fins/summary の全レコードから期間種別・売上を抽出して確認
+  const finsAllRecords = (fins?.data ?? []).map((r: Record<string, unknown>) => ({
+    keys: Object.keys(r),
+    DocType: r.DocType,
+    TypeOfDocument: r.TypeOfDocument,
+    Period: r.Period,
+    FiscalYear: r.FiscalYear,
+    FiscalPeriodEnd: r.FiscalPeriodEnd,
+    DisclosedDate: r.DisclosedDate,
+    Sales: r.Sales,
+    OP: r.OP,
+    NP: r.NP,
+    EPS: r.EPS,
+  }))
+
   return NextResponse.json({
     master_status: masterRes.status,
     master_first: master?.data?.[0] ?? master,
     fins_status: finsRes.status,
-    fins_first: fins?.data?.[0] ?? fins,
+    fins_all_count: fins?.data?.length ?? 0,
+    fins_all_records: finsAllRecords,
     bars_status: barsRes.status,
-    bars_first: bars?.data?.[0] ?? bars,  // 最初の1件でフィールド名確認
+    bars_first: bars?.data?.[0] ?? bars,
     bars_keys: bars?.data?.[0] ? Object.keys(bars.data[0]) : [],
   })
 }

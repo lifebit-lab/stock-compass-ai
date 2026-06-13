@@ -88,14 +88,74 @@ async function getFinancialFromJQuants(code: string): Promise<FinancialData> {
 
   if (statements.length === 0) return getDefaultFinancialData()
 
-  // 最新期と同一の決算書タイプ（会計基準）のみで比較 → IFRS↔J-GAAP混在による異常成長率を防ぐ
-  const latestDocType = String(statements[0]?.DocType ?? '')
-  const sameStandard = latestDocType
-    ? statements.filter(s => String(s.DocType ?? '') === latestDocType)
-    : statements
+  // 通期（年次）のみに絞り込み、新しい順に並び替える
+  // APIは開示日昇順（古い順）で返すため、ソートが必須
+  const annualStatements = extractAnnualStatements(statements)
+  if (annualStatements.length < 2) return getDefaultFinancialData()
 
-  const annual = sameStandard.slice(0, 3)
-  return parseStatements(annual)
+  // 最新期と同一の会計基準のみで比較 → IFRS↔J-GAAP混在による異常成長率を防ぐ
+  // DocType例: "FYFinancialStatements_Consolidated_IFRS"
+  const latestDocType = String(annualStatements[0]?.DocType ?? '')
+  const sameStandard = latestDocType
+    ? annualStatements.filter(s => String(s.DocType ?? '') === latestDocType)
+    : annualStatements
+
+  return parseStatements(sameStandard.slice(0, 3))
+}
+
+/**
+ * fins/summary の全レコードから通期（本決算）のみを抽出し、新しい順に並び替える。
+ * J-Quants V2 では DocType が "FY" で始まるレコードが通期。
+ *   例: "FYFinancialStatements_Consolidated_IFRS"
+ *   四半期: "1QFinancialStatements_*", "2QFinancialStatements_*", "3QFinancialStatements_*"
+ * APIは開示日昇順（古い順）で返すため CurPerEn（期末日）で降順ソートする。
+ */
+function extractAnnualStatements(
+  statements: Array<Record<string, string | number>>
+): Array<Record<string, string | number>> {
+  const annual = statements.filter(s => String(s.DocType ?? '').startsWith('FY'))
+
+  if (annual.length >= 2) {
+    return [...annual].sort((a, b) =>
+      String(b.CurPerEn ?? b.DiscDate ?? '').localeCompare(
+        String(a.CurPerEn ?? a.DiscDate ?? '')
+      )
+    )
+  }
+
+  // フォールバック: CurPerEn の月で通期を推定（DocType が取得できない場合）
+  return extractByDominantFiscalMonth(statements)
+}
+
+function extractByDominantFiscalMonth(
+  statements: Array<Record<string, string | number>>
+): Array<Record<string, string | number>> {
+  const monthMap = new Map<string, Array<Record<string, string | number>>>()
+
+  for (const s of statements) {
+    const dateStr = String(s.CurPerEn ?? s.FiscalPeriodEnd ?? '')
+    const match = dateStr.match(/^\d{4}-(\d{2})/)
+    if (!match) continue
+    const month = match[1]
+    const group = monthMap.get(month) ?? []
+    group.push(s)
+    monthMap.set(month, group)
+  }
+
+  if (monthMap.size === 0) return statements
+
+  const sorted = [...monthMap.entries()].sort((a, b) => b[1].length - a[1].length)
+  const annualRecords = sorted[0][1]
+
+  if (annualRecords.length >= 2) {
+    return [...annualRecords].sort((a, b) =>
+      String(b.CurPerEn ?? b.DiscDate ?? '').localeCompare(
+        String(a.CurPerEn ?? a.DiscDate ?? '')
+      )
+    )
+  }
+
+  return statements
 }
 
 function parseStatements(statements: Array<Record<string, string | number>>): FinancialData {

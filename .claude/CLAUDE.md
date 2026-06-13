@@ -1,3 +1,7 @@
+## Next.js 注意事項
+
+学習データと異なる破壊的変更が含まれる可能性がある。コードを書く前に `node_modules/next/dist/docs/` のガイドを参照し、deprecation 警告に従うこと。
+
 # Stock Compass AI — プロジェクトルール
 
 ## プロジェクト概要
