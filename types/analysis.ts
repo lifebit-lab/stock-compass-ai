@@ -91,7 +91,9 @@ export interface ScreenerResult {
   score: number
   roe: number
   per: number
+  pbr: number
   equityRatio: number
   dividendYield: number
   revenueGrowthRate: number
+  operatingMargin: number
 }

@@ -13,9 +13,19 @@ function ScoreBadge({ score }: { score: number }) {
   return <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${color}`}>{score}点</span>
 }
 
-function Num({ value, unit = '%' }: { value: number; unit?: string }) {
+function Num({ value, unit = '%', good, warn }: {
+  value: number
+  unit?: string
+  good?: (v: number) => boolean
+  warn?: (v: number) => boolean
+}) {
   if (value === 0) return <span className="text-muted-foreground">---</span>
-  return <span>{value.toFixed(1)}{unit}</span>
+  const color = good && good(value)
+    ? 'text-emerald-600'
+    : warn && warn(value)
+    ? 'text-yellow-600'
+    : undefined
+  return <span className={color}>{value.toFixed(1)}{unit}</span>
 }
 
 export function ScreenerResults({ results, message }: Props) {
@@ -40,15 +50,16 @@ export function ScreenerResults({ results, message }: Props) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border text-muted-foreground text-xs">
-            <th className="text-left py-2 pr-3">順位</th>
-            <th className="text-left py-2 pr-3">銘柄</th>
-            <th className="text-left py-2 pr-3">業種</th>
-            <th className="text-right py-2 pr-3">スコア</th>
-            <th className="text-right py-2 pr-3">ROE</th>
-            <th className="text-right py-2 pr-3">PER</th>
-            <th className="text-right py-2 pr-3">自己資本比率</th>
-            <th className="text-right py-2 pr-3">配当利回り</th>
-            <th className="text-right py-2">売上成長率</th>
+            <th className="text-left py-2 pr-3 whitespace-nowrap">順位</th>
+            <th className="text-left py-2 pr-3 whitespace-nowrap">銘柄</th>
+            <th className="text-left py-2 pr-3 whitespace-nowrap">業種</th>
+            <th className="text-right py-2 pr-3 whitespace-nowrap">スコア</th>
+            <th className="text-right py-2 pr-3 whitespace-nowrap">ROE</th>
+            <th className="text-right py-2 pr-3 whitespace-nowrap">営業利益率</th>
+            <th className="text-right py-2 pr-3 whitespace-nowrap">自己資本比率</th>
+            <th className="text-right py-2 pr-3 whitespace-nowrap">PER</th>
+            <th className="text-right py-2 pr-3 whitespace-nowrap">PBR</th>
+            <th className="text-right py-2 whitespace-nowrap">配当利回り</th>
           </tr>
         </thead>
         <tbody>
@@ -56,21 +67,34 @@ export function ScreenerResults({ results, message }: Props) {
             <tr key={r.code} className="border-b border-border hover:bg-muted/30 transition-colors">
               <td className="py-2 pr-3 text-muted-foreground">{i + 1}</td>
               <td className="py-2 pr-3">
-                <Link href={`/stock/${r.code}`} className="flex items-center gap-1 hover:text-emerald-600 font-medium">
+                <Link href={`/stock/${r.code}`} className="flex items-center gap-1 hover:text-emerald-600 font-medium whitespace-nowrap">
                   {r.name}
                   <span className="text-muted-foreground text-xs">{r.code}</span>
                   <ExternalLink className="h-3 w-3 text-muted-foreground" />
                 </Link>
               </td>
               <td className="py-2 pr-3">
-                <Badge variant="secondary" className="text-xs">{r.sector}</Badge>
+                <Badge variant="secondary" className="text-xs whitespace-nowrap">{r.sector}</Badge>
               </td>
               <td className="py-2 pr-3 text-right"><ScoreBadge score={r.score} /></td>
-              <td className="py-2 pr-3 text-right"><Num value={r.roe} /></td>
-              <td className="py-2 pr-3 text-right"><Num value={r.per} unit="倍" /></td>
-              <td className="py-2 pr-3 text-right"><Num value={r.equityRatio} /></td>
-              <td className="py-2 pr-3 text-right"><Num value={r.dividendYield} /></td>
-              <td className="py-2 text-right"><Num value={r.revenueGrowthRate} /></td>
+              <td className="py-2 pr-3 text-right">
+                <Num value={r.roe} good={v => v >= 15} warn={v => v >= 10} />
+              </td>
+              <td className="py-2 pr-3 text-right">
+                <Num value={r.operatingMargin} good={v => v >= 10} warn={v => v >= 5} />
+              </td>
+              <td className="py-2 pr-3 text-right">
+                <Num value={r.equityRatio} good={v => v >= 40} warn={v => v >= 20} />
+              </td>
+              <td className="py-2 pr-3 text-right">
+                <Num value={r.per} unit="倍" good={v => v > 0 && v <= 15} warn={v => v > 0 && v <= 20} />
+              </td>
+              <td className="py-2 pr-3 text-right">
+                <Num value={r.pbr} unit="倍" good={v => v > 0 && v <= 1} warn={v => v > 0 && v <= 1.5} />
+              </td>
+              <td className="py-2 text-right">
+                <Num value={r.dividendYield} good={v => v >= 3} warn={v => v >= 1} />
+              </td>
             </tr>
           ))}
         </tbody>

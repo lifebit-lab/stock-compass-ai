@@ -73,7 +73,7 @@ export async function getFinancialData(stockCode: string): Promise<FinancialData
   return getFinancialFromJQuants(stockCode)
 }
 
-async function getFinancialFromJQuants(code: string): Promise<FinancialData> {
+export async function getFinancialFromJQuants(code: string): Promise<FinancialData> {
   const apiKey = process.env.JQUANTS_API_KEY
   if (!apiKey) return getDefaultFinancialData()
 

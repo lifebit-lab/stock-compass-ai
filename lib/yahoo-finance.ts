@@ -32,42 +32,59 @@ export async function getFinancialFromYahoo(stockCode: string): Promise<Financia
     const desc = (arr: AnyRecord[]) =>
       [...arr].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-    const f = desc(fins), b = desc(bals), c = desc(cfs)
+    const f = desc(fins)
+    const b = desc(bals)
+    const c = desc(cfs)
 
-    if (f.length < 2) return null
+    if (f.length < 1) return null
 
-    const [f0, f1, f2] = f
+    // フィールドが undefined の年があるため、各指標ごとに有効なレコードを選ぶ
+    const withRev = f.filter(r => typeof r.totalRevenue === 'number' && r.totalRevenue > 0)
+    const withOp  = f.filter(r => typeof r.operatingIncome === 'number')
+    const withEps = f.filter(r => typeof r.dilutedEPS === 'number')
+
+    const revenue   = n(withRev[0]?.totalRevenue)
+    const revPrev   = n(withRev[1]?.totalRevenue)
+    const revPrev2  = n(withRev[2]?.totalRevenue)
+    const op        = n(withOp[0]?.operatingIncome)
+    const opPrev    = n(withOp[1]?.operatingIncome)
+    const netIncome = n(withOp[0]?.netIncome ?? f[0]?.netIncome)
+    const eps       = n(withEps[0]?.dilutedEPS)
+    const epsPrev   = n(withEps[1]?.dilutedEPS)
+
     const b0: AnyRecord = b[0] ?? {}
     const c0: AnyRecord = c[0] ?? {}
     const fd: AnyRecord = sum.financialData ?? {}
     const ks: AnyRecord = sum.defaultKeyStatistics ?? {}
     const sd: AnyRecord = sum.summaryDetail ?? {}
 
-    const revenue = n(f0.totalRevenue)
-    const revPrev = n(f1.totalRevenue)
-    const revPrev2 = n(f2?.totalRevenue)
-    const op = n(f0.operatingIncome)
-    const opPrev = n(f1.operatingIncome)
-    const netIncome = n(f0.netIncome)
-    const eps = n(f0.dilutedEPS)
-    const epsPrev = n(f1.dilutedEPS)
     const assets = n(b0.totalAssets)
     const equity = n(b0.commonStockEquity)
-    const cfo = n(c0.operatingCashFlow)
+    const cfo    = n(c0.operatingCashFlow)
     const divRate = n(sd.dividendRate)
 
     const revGrowth = revPrev > 0 ? ((revenue - revPrev) / revPrev) * 100 : 0
-    const opGrowth = opPrev !== 0 ? ((op - opPrev) / Math.abs(opPrev)) * 100 : 0
+    const opGrowth  = opPrev !== 0 ? ((op - opPrev) / Math.abs(opPrev)) * 100 : 0
     const epsGrowth = epsPrev !== 0 ? ((eps - epsPrev) / Math.abs(epsPrev)) * 100 : 0
     const payoutRatio = eps > 0 && divRate > 0 ? (divRate / eps) * 100 : 0
 
-    // 期間: 前期末日+1日 〜 当期末日
-    const endDate = new Date(f0.date)
-    const prevEnd = new Date(f1.date)
-    prevEnd.setDate(prevEnd.getDate() + 1)
-    const period = {
-      start: prevEnd.toISOString().split('T')[0],
-      end: endDate.toISOString().split('T')[0],
+    // 期間: 有効な売上データの最新2件から算出（なければ最新FY）
+    const endDateSrc  = withRev[0]?.date ?? f[0].date
+    const prevDateSrc = withRev[1]?.date ?? f[1]?.date
+    const endDate = new Date(endDateSrc)
+    let period: { start: string; end: string } | undefined
+    if (prevDateSrc) {
+      const prevEnd = new Date(prevDateSrc)
+      prevEnd.setDate(prevEnd.getDate() + 1)
+      period = {
+        start: prevEnd.toISOString().split('T')[0],
+        end: endDate.toISOString().split('T')[0],
+      }
+    } else {
+      period = {
+        start: new Date(endDate.getFullYear() - 1, endDate.getMonth(), endDate.getDate() + 1).toISOString().split('T')[0],
+        end: endDate.toISOString().split('T')[0],
+      }
     }
 
     return {
@@ -87,7 +104,7 @@ export async function getFinancialFromYahoo(stockCode: string): Promise<Financia
       per: 0,             // API側で株価から算出
       pbr: 0,             // API側で株価から算出
       revenue: [revenue, revPrev, revPrev2],
-      operatingProfit: [op, opPrev, n(f2?.operatingIncome)],
+      operatingProfit: [op, opPrev, n(withOp[2]?.operatingIncome)],
       dividendHistory: [divRate, 0, 0],
       eps,
       bps: n(ks.bookValue),
@@ -98,4 +115,31 @@ export async function getFinancialFromYahoo(stockCode: string): Promise<Financia
     console.error('[yahoo-finance] Error for', stockCode, ':', e)
     return null
   }
+}
+
+/** スクリーナー用バッチ取得: 複数銘柄のPER・PBR・配当利回りを一括取得 */
+export async function getBatchQuotes(
+  stockCodes: string[]
+): Promise<Map<string, { per: number; pbr: number; dividendYield: number }>> {
+  const tickers = stockCodes.map(c => `${c}.T`)
+  const result = new Map<string, { per: number; pbr: number; dividendYield: number }>()
+
+  try {
+    const yf = await getYF()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const quotes: AnyRecord[] = await yf.quote(tickers)
+    for (const q of quotes) {
+      const code = String(q.symbol ?? '').replace('.T', '')
+      if (!code) continue
+      result.set(code, {
+        per: n(q.trailingPE),
+        pbr: n(q.priceToBook),
+        dividendYield: n(q.dividendYield),
+      })
+    }
+  } catch (e) {
+    console.error('[yahoo-finance] getBatchQuotes error:', e)
+  }
+
+  return result
 }
