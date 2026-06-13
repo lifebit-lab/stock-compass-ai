@@ -59,13 +59,17 @@ export async function getEdinetCode(stockCode: string): Promise<string | null> {
   return company?.edinetCode ?? null
 }
 
-// 財務データを取得（モック値を含む安全なフォールバック付き）
+// 財務データを取得（Yahoo Finance優先、J-Quantsフォールバック）
 export async function getFinancialData(stockCode: string): Promise<FinancialData> {
-  // EDINET APIはXBRLの解析が必要なため、
-  // Phase 1では財務APIから取得可能な主要指標のみを返す
-  // 実際のEDINET XBRLパースはPhase 1.5以降で実装予定
+  // Yahoo Financeで最新データ（FY2026等）を取得
+  try {
+    const { getFinancialFromYahoo } = await import('./yahoo-finance')
+    const yahooData = await getFinancialFromYahoo(stockCode)
+    if (yahooData) return yahooData
+  } catch {
+    // Yahoo Finance失敗時はJ-Quantsにフォールバック
+  }
 
-  // J-Quants fins APIから財務情報を取得（より実用的）
   return getFinancialFromJQuants(stockCode)
 }
 
