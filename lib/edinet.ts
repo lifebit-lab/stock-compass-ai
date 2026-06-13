@@ -224,6 +224,10 @@ function parseStatements(statements: Array<Record<string, string | number>>): Fi
     eps,
     bps: toNum(latest.BPS),
     divPerShare,
+    // 財務データ期間（CurPerSt〜CurPerEn）
+    period: latest.CurPerSt && latest.CurPerEn
+      ? { start: String(latest.CurPerSt), end: String(latest.CurPerEn) }
+      : undefined,
   }
 }
 

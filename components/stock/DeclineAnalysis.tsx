@@ -1,10 +1,15 @@
-import type { DeclineAnalysis as DeclineAnalysisType } from '@/types/analysis'
+'use client'
+
+import type { DeclineAnalysis as DeclineAnalysisType, PeriodInfo } from '@/types/analysis'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { InfoTooltip } from '@/components/ui/InfoTooltip'
 import { AlertTriangle, TrendingDown, CheckCircle2 } from 'lucide-react'
+import { DECLINE_DEFINITIONS, getStockPricePeriodLabel } from '@/lib/definitions'
 
 interface Props {
   decline: DeclineAnalysisType
+  periodInfo?: PeriodInfo
 }
 
 const causeLabels: Record<string, string> = {
@@ -23,9 +28,9 @@ const causeColors: Record<string, string> = {
   unknown: 'bg-gray-100 text-gray-700',
 }
 
-export function DeclineAnalysis({ decline }: Props) {
-  const sortedCauses = Object.entries(decline.causes)
-    .sort((a, b) => b[1] - a[1])
+export function DeclineAnalysis({ decline, periodInfo }: Props) {
+  const sp = getStockPricePeriodLabel(periodInfo)
+  const sortedCauses = Object.entries(decline.causes).sort((a, b) => b[1] - a[1])
 
   return (
     <Card className={decline.isTemporary ? 'border-emerald-200' : 'border-red-200'}>
@@ -33,6 +38,10 @@ export function DeclineAnalysis({ decline }: Props) {
         <CardTitle className="text-base flex items-center gap-2">
           <TrendingDown className="h-4 w-4" />
           下落理由分析
+          <InfoTooltip
+            definition={DECLINE_DEFINITIONS.isTemporary.definition}
+            period={sp}
+          />
           <span className="ml-auto">
             {decline.isTemporary ? (
               <Badge className="bg-emerald-100 text-emerald-700 border-0">
@@ -57,12 +66,17 @@ export function DeclineAnalysis({ decline }: Props) {
           </span>
         </div>
 
-        {/* 要因の内訳バー（推定値） */}
+        {/* 要因の内訳バー */}
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">推定寄与率（参考値）</p>
           {sortedCauses.map(([key, pct]) => (
             <div key={key} className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground w-24 shrink-0">{causeLabels[key]}</span>
+              <span className="text-xs text-muted-foreground w-28 shrink-0 flex items-center">
+                {causeLabels[key]}
+                {DECLINE_DEFINITIONS[key] && (
+                  <InfoTooltip definition={DECLINE_DEFINITIONS[key].definition} period={sp} />
+                )}
+              </span>
               <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full ${key === 'structural' ? 'bg-red-400' : key === 'market' ? 'bg-blue-400' : key === 'sector' ? 'bg-yellow-400' : 'bg-orange-400'}`}

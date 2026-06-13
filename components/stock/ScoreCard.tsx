@@ -1,18 +1,32 @@
 'use client'
 
 import { RadialBarChart, RadialBar, ResponsiveContainer } from 'recharts'
-import type { ScoreBreakdown } from '@/types/analysis'
+import type { ScoreBreakdown, PeriodInfo } from '@/types/analysis'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { InfoTooltip } from '@/components/ui/InfoTooltip'
+import { SCORE_DEFINITIONS, getFinancialPeriodLabel } from '@/lib/definitions'
 
 interface Props {
   score: ScoreBreakdown
+  periodInfo?: PeriodInfo
 }
 
-function ScoreItem({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+function ScoreItem({ label, definitionKey, value, max, color, period }: {
+  label: string
+  definitionKey: string
+  value: number
+  max: number
+  color: string
+  period?: string
+}) {
   const pct = Math.round((value / max) * 100)
+  const def = SCORE_DEFINITIONS[definitionKey]
   return (
     <div className="flex items-center gap-3">
-      <span className="text-sm text-muted-foreground w-20 shrink-0">{label}</span>
+      <span className="text-sm text-muted-foreground w-24 shrink-0 flex items-center">
+        {label}
+        {def && <InfoTooltip definition={def.definition} period={period} />}
+      </span>
       <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
@@ -35,7 +49,8 @@ function scoreLabel(total: number): string {
   return '要検討'
 }
 
-export function ScoreCard({ score }: Props) {
+export function ScoreCard({ score, periodInfo }: Props) {
+  const fp = getFinancialPeriodLabel(periodInfo)
   const chartData = [{ value: score.total, fill: score.total >= 75 ? '#10b981' : score.total >= 55 ? '#eab308' : '#ef4444' }]
 
   return (
@@ -73,12 +88,12 @@ export function ScoreCard({ score }: Props) {
                 {scoreLabel(score.total)}
               </span>
             </div>
-            <ScoreItem label="財務健全性" value={score.financial} max={25} color="bg-blue-500" />
-            <ScoreItem label="成長性" value={score.growth} max={20} color="bg-emerald-500" />
-            <ScoreItem label="収益性" value={score.profitability} max={15} color="bg-purple-500" />
-            <ScoreItem label="株主還元" value={score.shareholder} max={10} color="bg-pink-500" />
-            <ScoreItem label="割安性" value={score.valuation} max={10} color="bg-orange-500" />
-            <ScoreItem label="テクニカル" value={score.technical} max={20} color="bg-cyan-500" />
+            <ScoreItem label="財務健全性" definitionKey="financial" value={score.financial} max={25} color="bg-blue-500" period={fp} />
+            <ScoreItem label="成長性" definitionKey="growth" value={score.growth} max={20} color="bg-emerald-500" period={fp} />
+            <ScoreItem label="収益性" definitionKey="profitability" value={score.profitability} max={15} color="bg-purple-500" period={fp} />
+            <ScoreItem label="株主還元" definitionKey="shareholder" value={score.shareholder} max={10} color="bg-pink-500" period={fp} />
+            <ScoreItem label="割安性" definitionKey="valuation" value={score.valuation} max={10} color="bg-orange-500" period={fp} />
+            <ScoreItem label="テクニカル" definitionKey="technical" value={score.technical} max={20} color="bg-cyan-500" period={fp} />
           </div>
         </div>
       </CardContent>

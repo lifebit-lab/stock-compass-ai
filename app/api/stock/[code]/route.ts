@@ -4,7 +4,7 @@ import { getFinancialData } from '@/lib/edinet'
 import { calcTechnicalIndicators } from '@/lib/utils/technical'
 import { calcScore, calcInvestmentStyle } from '@/lib/utils/scoring'
 import { analyzeDecline, checkExclusion } from '@/lib/utils/decline-rule'
-import type { StockAnalysis } from '@/types/analysis'
+import type { StockAnalysis, PeriodInfo } from '@/types/analysis'
 
 export async function GET(
   _req: NextRequest,
@@ -47,6 +47,13 @@ export async function GET(
   const exclusion = checkExclusion(financial)
   const investmentStyle = calcInvestmentStyle(financial, score)
 
+  const periodInfo: PeriodInfo = {
+    financialPeriod: financial.period ?? null,
+    stockPricePeriod: stockPrices.length > 0
+      ? { start: stockPrices[0].date, end: stockPrices[stockPrices.length - 1].date }
+      : null,
+  }
+
   const analysis: StockAnalysis = {
     code,
     company: companyInfo,
@@ -56,6 +63,7 @@ export async function GET(
     exclusion,
     score,
     investmentStyle,
+    periodInfo,
     analyzedAt: new Date().toISOString(),
   }
 

@@ -11,6 +11,7 @@ import { getFinancialData } from '@/lib/edinet'
 import { calcTechnicalIndicators } from '@/lib/utils/technical'
 import { calcScore, calcInvestmentStyle } from '@/lib/utils/scoring'
 import { analyzeDecline, checkExclusion } from '@/lib/utils/decline-rule'
+import type { PeriodInfo } from '@/types/analysis'
 
 interface Props {
   params: Promise<{ code: string }>
@@ -58,6 +59,13 @@ export default async function StockPage({ params }: Props) {
   const exclusion = checkExclusion(fin)
   const investmentStyle = calcInvestmentStyle(fin, score)
 
+  const periodInfo: PeriodInfo = {
+    financialPeriod: fin.period ?? null,
+    stockPricePeriod: stockPrices.length > 0
+      ? { start: stockPrices[0].date, end: stockPrices[stockPrices.length - 1].date }
+      : null,
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-4">
       {/* 企業概要 */}
@@ -70,15 +78,15 @@ export default async function StockPage({ params }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* 左カラム */}
         <div className="space-y-4">
-          <ScoreCard score={score} />
-          <DeclineAnalysis decline={decline} />
+          <ScoreCard score={score} periodInfo={periodInfo} />
+          <DeclineAnalysis decline={decline} periodInfo={periodInfo} />
           <InvestmentStyle style={investmentStyle} />
         </div>
 
         {/* 右カラム */}
         <div className="space-y-4">
           <TechnicalChartWrapper prices={stockPrices} technical={technical} />
-          <FinancialScore financial={fin} />
+          <FinancialScore financial={fin} periodInfo={periodInfo} />
         </div>
       </div>
     </div>

@@ -43,4 +43,5 @@ export interface FinancialData {
   eps?: number                     // EPS（円）
   bps?: number                     // BPS（円）
   divPerShare?: number             // 年間配当（円）
+  period?: { start: string; end: string }  // 財務データ期間（CurPerSt〜CurPerEn）
 }

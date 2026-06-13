@@ -56,6 +56,11 @@ export interface InvestmentStyle {
   longTerm: boolean       // 長期保有向き
 }
 
+export interface PeriodInfo {
+  financialPeriod: { start: string; end: string } | null  // CurPerSt〜CurPerEn
+  stockPricePeriod: { start: string; end: string } | null // 株価データの日付範囲
+}
+
 export interface StockAnalysis {
   code: string
   company: import('./stock').CompanyInfo
@@ -65,6 +70,7 @@ export interface StockAnalysis {
   exclusion: ExclusionWarning
   score: ScoreBreakdown
   investmentStyle: InvestmentStyle
+  periodInfo: PeriodInfo
   analyzedAt: string
 }
 
