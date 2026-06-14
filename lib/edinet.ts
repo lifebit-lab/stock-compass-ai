@@ -59,18 +59,36 @@ export async function getEdinetCode(stockCode: string): Promise<string | null> {
   return company?.edinetCode ?? null
 }
 
-// 財務データを取得（Yahoo Finance優先、J-Quantsフォールバック）
+// 財務データを取得
+// J-Quantsをベース（EqAR等の開示値で正確）+ Yahoo Financeが新しい期を持つ場合のみ成長率を補完
 export async function getFinancialData(stockCode: string): Promise<FinancialData> {
-  // Yahoo Financeで最新データ（FY2026等）を取得
-  try {
-    const { getFinancialFromYahoo } = await import('./yahoo-finance')
-    const yahooData = await getFinancialFromYahoo(stockCode)
-    if (yahooData) return yahooData
-  } catch {
-    // Yahoo Finance失敗時はJ-Quantsにフォールバック
+  const { getFinancialFromYahoo } = await import('./yahoo-finance')
+
+  const [base, yahooData] = await Promise.all([
+    getFinancialFromJQuants(stockCode),
+    getFinancialFromYahoo(stockCode).catch(() => null),
+  ])
+
+  // Yahoo Financeがより新しい期を持つ場合のみ、成長率・売上系を上書き
+  // 比率指標（EqAR/ROE/ROA/営業利益率）はJ-Quantsの開示値を常に維持
+  if (yahooData?.period && base.period) {
+    if (yahooData.period.end > base.period.end) {
+      base.revenueGrowthRate       = yahooData.revenueGrowthRate
+      base.operatingProfitGrowthRate = yahooData.operatingProfitGrowthRate
+      base.epsGrowthRate           = yahooData.epsGrowthRate
+      base.operatingCashFlow       = yahooData.operatingCashFlow
+      base.revenue                 = yahooData.revenue
+      base.operatingProfit         = yahooData.operatingProfit
+      base.eps                     = yahooData.eps
+      base.bps                     = yahooData.bps
+      base.divPerShare             = yahooData.divPerShare
+      base.dividendHistory         = yahooData.dividendHistory
+      base.period                  = yahooData.period
+      // equityRatio / roe / roa / operatingMargin はJ-Quantsのまま維持
+    }
   }
 
-  return getFinancialFromJQuants(stockCode)
+  return base
 }
 
 export async function getFinancialFromJQuants(code: string): Promise<FinancialData> {
