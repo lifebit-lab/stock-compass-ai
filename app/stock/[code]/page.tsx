@@ -6,7 +6,7 @@ import { ExclusionWarning } from '@/components/stock/ExclusionWarning'
 import { ScoreCard } from '@/components/stock/ScoreCard'
 import { InvestmentStyle } from '@/components/stock/InvestmentStyle'
 import { TechnicalChartWrapper } from '@/components/stock/TechnicalChartWrapper'
-import { HistoricalTable } from '@/components/stock/HistoricalTable'
+import { HistoricalSection } from '@/components/stock/HistoricalSection'
 import { IRLinks } from '@/components/stock/IRLinks'
 import { getStockPrices, getCompanyInfo, getNikkeiPrices } from '@/lib/jquants'
 import { getFinancialData } from '@/lib/edinet'
@@ -96,9 +96,7 @@ export default async function StockPage({ params }: Props) {
       </div>
 
       {/* 業績推移（10年） */}
-      {historicalData.length > 0 && (
-        <HistoricalTable data={historicalData} />
-      )}
+      <HistoricalSection data={historicalData} />
 
       {/* IR・開示資料 */}
       <IRLinks code={code} companyName={companyInfo.name} irWebsite={irWebsite} />
