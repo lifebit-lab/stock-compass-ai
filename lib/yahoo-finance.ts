@@ -136,22 +136,25 @@ export async function getHistoricalFinancials(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     )
 
-    return sorted.slice(0, 12).map((r: AnyRecord) => {
-      const endDate = new Date(r.date)
-      const rev = typeof r.totalRevenue === 'number' ? r.totalRevenue : null
-      const op  = typeof r.operatingIncome === 'number' ? r.operatingIncome : null
-      const net = typeof r.netIncome === 'number' ? r.netIncome : null
-      const eps = typeof r.dilutedEPS === 'number' ? r.dilutedEPS : null
-      return {
-        fiscalYearEnd: endDate.toISOString().split('T')[0],
-        label: `${endDate.getFullYear()}/${endDate.getMonth() + 1}`,
-        revenue: rev,
-        operatingIncome: op,
-        netIncome: net,
-        eps,
-        operatingMargin: rev && rev > 0 && op !== null ? (op / rev) * 100 : null,
-      }
-    })
+    return sorted
+      .filter((r: AnyRecord) => typeof r.totalRevenue === 'number' && r.totalRevenue > 0)
+      .slice(0, 12)
+      .map((r: AnyRecord) => {
+        const endDate = new Date(r.date)
+        const rev = r.totalRevenue as number
+        const op  = typeof r.operatingIncome === 'number' ? r.operatingIncome : null
+        const net = typeof r.netIncome === 'number' ? r.netIncome : null
+        const eps = typeof r.dilutedEPS === 'number' ? r.dilutedEPS : null
+        return {
+          fiscalYearEnd: endDate.toISOString().split('T')[0],
+          label: `${endDate.getFullYear()}/${endDate.getMonth() + 1}`,
+          revenue: rev,
+          operatingIncome: op,
+          netIncome: net,
+          eps,
+          operatingMargin: op !== null ? (op / rev) * 100 : null,
+        }
+      })
   } catch (e) {
     console.error('[yahoo-finance] getHistoricalFinancials error:', e)
     return []
