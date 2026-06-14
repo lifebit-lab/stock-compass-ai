@@ -16,6 +16,16 @@ export interface CompanyInfo {
   exchange: string
 }
 
+export interface HistoricalFinancialYear {
+  fiscalYearEnd: string        // "2026-03-31"
+  label: string                // "2026/3"
+  revenue: number | null       // 円
+  operatingIncome: number | null
+  netIncome: number | null
+  eps: number | null
+  operatingMargin: number | null  // %
+}
+
 export interface FinancialData {
   // 成長性
   revenueGrowthRate: number        // 売上成長率（%）

@@ -6,8 +6,11 @@ import { ExclusionWarning } from '@/components/stock/ExclusionWarning'
 import { ScoreCard } from '@/components/stock/ScoreCard'
 import { InvestmentStyle } from '@/components/stock/InvestmentStyle'
 import { TechnicalChartWrapper } from '@/components/stock/TechnicalChartWrapper'
+import { HistoricalTable } from '@/components/stock/HistoricalTable'
+import { IRLinks } from '@/components/stock/IRLinks'
 import { getStockPrices, getCompanyInfo, getNikkeiPrices } from '@/lib/jquants'
 import { getFinancialData } from '@/lib/edinet'
+import { getHistoricalFinancials, getIRWebsite } from '@/lib/yahoo-finance'
 import { calcTechnicalIndicators } from '@/lib/utils/technical'
 import { calcScore, calcInvestmentStyle } from '@/lib/utils/scoring'
 import { analyzeDecline, checkExclusion } from '@/lib/utils/decline-rule'
@@ -29,11 +32,13 @@ export default async function StockPage({ params }: Props) {
 
   if (!/^\d{4}$/.test(code)) notFound()
 
-  const [stockPrices, companyInfo, financial, nikkeiPrices] = await Promise.all([
+  const [stockPrices, companyInfo, financial, nikkeiPrices, historicalData, irWebsite] = await Promise.all([
     getStockPrices(code).catch(() => []),
     getCompanyInfo(code).catch(() => null),
     getFinancialData(code).catch(() => null),
     getNikkeiPrices().catch(() => []),
+    getHistoricalFinancials(code).catch(() => []),
+    getIRWebsite(code).catch(() => undefined),
   ])
 
   if (!companyInfo) notFound()
@@ -89,6 +94,14 @@ export default async function StockPage({ params }: Props) {
           <FinancialScore financial={fin} periodInfo={periodInfo} />
         </div>
       </div>
+
+      {/* 業績推移（10年） */}
+      {historicalData.length > 0 && (
+        <HistoricalTable data={historicalData} />
+      )}
+
+      {/* IR・開示資料 */}
+      <IRLinks code={code} companyName={companyInfo.name} irWebsite={irWebsite} />
     </div>
   )
 }

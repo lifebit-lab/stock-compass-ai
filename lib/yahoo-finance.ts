@@ -117,6 +117,60 @@ export async function getFinancialFromYahoo(stockCode: string): Promise<Financia
   }
 }
 
+/** 過去10年の業績推移データを取得 */
+export async function getHistoricalFinancials(
+  stockCode: string
+): Promise<import('@/types/stock').HistoricalFinancialYear[]> {
+  const ticker = `${stockCode}.T`
+  const period1 = '2013-01-01'  // 10年超を確保
+
+  try {
+    const yf = await getYF()
+    const fins = await yf.fundamentalsTimeSeries(ticker, {
+      type: 'annual',
+      module: 'financials',
+      period1,
+    }) as AnyRecord[]
+
+    const sorted = [...fins].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    )
+
+    return sorted.slice(0, 12).map((r: AnyRecord) => {
+      const endDate = new Date(r.date)
+      const rev = typeof r.totalRevenue === 'number' ? r.totalRevenue : null
+      const op  = typeof r.operatingIncome === 'number' ? r.operatingIncome : null
+      const net = typeof r.netIncome === 'number' ? r.netIncome : null
+      const eps = typeof r.dilutedEPS === 'number' ? r.dilutedEPS : null
+      return {
+        fiscalYearEnd: endDate.toISOString().split('T')[0],
+        label: `${endDate.getFullYear()}/${endDate.getMonth() + 1}`,
+        revenue: rev,
+        operatingIncome: op,
+        netIncome: net,
+        eps,
+        operatingMargin: rev && rev > 0 && op !== null ? (op / rev) * 100 : null,
+      }
+    })
+  } catch (e) {
+    console.error('[yahoo-finance] getHistoricalFinancials error:', e)
+    return []
+  }
+}
+
+/** IR公式サイトURLを取得 */
+export async function getIRWebsite(stockCode: string): Promise<string | undefined> {
+  try {
+    const yf = await getYF()
+    const sum = await yf.quoteSummary(`${stockCode}.T`, {
+      modules: ['summaryProfile'],
+    }) as AnyRecord
+    return sum.summaryProfile?.irWebsite ?? undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** スクリーナー用バッチ取得: 複数銘柄のPER・PBR・配当利回りを一括取得 */
 export async function getBatchQuotes(
   stockCodes: string[]
