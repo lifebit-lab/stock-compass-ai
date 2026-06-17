@@ -10,9 +10,8 @@ interface Props {
   loading: boolean
 }
 
-function RangeInput({ label, field, min, max, step, unit, value, onChange }: {
+function RangeInput({ label, min, max, step, unit, value, onChange }: {
   label: string
-  field: string
   min: number
   max: number
   step: number
@@ -50,11 +49,11 @@ export function ScreenerForm({ onSearch, loading }: Props) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <RangeInput label="ROE" field="roe" min={0} max={50} step={1} unit="%" value={conditions.roe ?? {}} onChange={v => update('roe', v)} />
-        <RangeInput label="自己資本比率" field="equityRatio" min={0} max={100} step={5} unit="%" value={conditions.equityRatio ?? {}} onChange={v => update('equityRatio', v)} />
-        <RangeInput label="配当利回り" field="dividendYield" min={0} max={10} step={0.5} unit="%" value={conditions.dividendYield ?? {}} onChange={v => update('dividendYield', v)} />
-        <RangeInput label="売上成長率" field="revenueGrowthRate" min={-20} max={50} step={1} unit="%" value={conditions.revenueGrowthRate ?? {}} onChange={v => update('revenueGrowthRate', v)} />
-        <RangeInput label="営業利益率" field="operatingMargin" min={0} max={50} step={1} unit="%" value={conditions.operatingMargin ?? {}} onChange={v => update('operatingMargin', v)} />
+        <RangeInput label="ROE" min={0} max={50} step={1} unit="%" value={conditions.roe ?? {}} onChange={v => update('roe', v)} />
+        <RangeInput label="自己資本比率" min={0} max={100} step={5} unit="%" value={conditions.equityRatio ?? {}} onChange={v => update('equityRatio', v)} />
+        <RangeInput label="配当利回り" min={0} max={10} step={0.5} unit="%" value={conditions.dividendYield ?? {}} onChange={v => update('dividendYield', v)} />
+        <RangeInput label="売上成長率" min={-20} max={50} step={1} unit="%" value={conditions.revenueGrowthRate ?? {}} onChange={v => update('revenueGrowthRate', v)} />
+        <RangeInput label="営業利益率" min={0} max={50} step={1} unit="%" value={conditions.operatingMargin ?? {}} onChange={v => update('operatingMargin', v)} />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">

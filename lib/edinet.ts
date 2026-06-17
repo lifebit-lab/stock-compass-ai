@@ -1,64 +1,5 @@
 import type { FinancialData } from '@/types/stock'
 
-const BASE_URL = 'https://disclosure.edinet-fsa.go.jp/api/v2'
-
-interface EdinetDocumentListItem {
-  docID: string
-  edinetCode: string
-  filerName: string
-  docTypeCode: string
-  periodEnd: string
-  submitDateTime: string
-}
-
-// EDINET書類一覧から最新の有価証券報告書を検索
-async function getLatestAnnualReport(edinetCode: string): Promise<EdinetDocumentListItem | null> {
-  const today = new Date()
-  const results: EdinetDocumentListItem[] = []
-
-  // 直近2年分を検索
-  for (let i = 0; i < 730; i += 30) {
-    const date = new Date(today)
-    date.setDate(date.getDate() - i)
-    const dateStr = date.toISOString().split('T')[0]
-
-    const res = await fetch(
-      `${BASE_URL}/documents.json?date=${dateStr}&type=2&Subscription-Key=${process.env.EDINET_API_KEY}`
-    )
-    if (!res.ok) continue
-
-    const data = await res.json()
-    const docs: EdinetDocumentListItem[] = data.results ?? []
-
-    // 有価証券報告書（docTypeCode: '120'）を探す
-    const annual = docs.find(
-      d => d.edinetCode === edinetCode && d.docTypeCode === '120'
-    )
-    if (annual) {
-      results.push(annual)
-      if (results.length >= 3) break
-    }
-  }
-
-  return results[0] ?? null
-}
-
-// EDINETコードを銘柄コードから取得（J-Quantsの企業情報を利用）
-export async function getEdinetCode(stockCode: string): Promise<string | null> {
-  // EDINETのコード検索API（企業名or証券コードで検索）
-  const res = await fetch(
-    `${BASE_URL}/companies.json?type=1&Subscription-Key=${process.env.EDINET_API_KEY}`
-  )
-  if (!res.ok) return null
-
-  const data = await res.json()
-  const company = (data.results ?? []).find(
-    (c: { securitiesCode: string; edinetCode: string }) =>
-      c.securitiesCode === stockCode.padStart(5, '0') + '0'
-  )
-  return company?.edinetCode ?? null
-}
-
 // 財務データを取得
 // J-Quantsをベース（EqAR等の開示値で正確）+ Yahoo Financeが新しい期を持つ場合のみ成長率を補完
 export async function getFinancialData(stockCode: string): Promise<FinancialData> {
@@ -199,7 +140,6 @@ function parseStatements(statements: Array<Record<string, string | number>>): Fi
   const operatingProfitPrev = toNum(prev.OP)
 
   const netIncome = toNum(latest.NP)
-  const netIncomePrev = toNum(prev.NP)
   const eps = toNum(latest.EPS)
   const epsPrev = toNum(prev.EPS)
 

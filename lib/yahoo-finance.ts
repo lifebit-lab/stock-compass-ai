@@ -117,12 +117,12 @@ export async function getFinancialFromYahoo(stockCode: string): Promise<Financia
   }
 }
 
-/** 過去10年の業績推移データを取得 */
+/** 過去の業績推移データを取得（Yahoo Financeの日本株は period1 に関わらず最大5件・4年分前後しか返さない） */
 export async function getHistoricalFinancials(
   stockCode: string
 ): Promise<import('@/types/stock').HistoricalFinancialYear[]> {
   const ticker = `${stockCode}.T`
-  const period1 = '2013-01-01'  // 10年超を確保
+  const period1 = '2013-01-01'
 
   try {
     const yf = await getYF()
@@ -183,7 +183,6 @@ export async function getBatchQuotes(
 
   try {
     const yf = await getYF()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const quotes: AnyRecord[] = await yf.quote(tickers)
     for (const q of quotes) {
       const code = String(q.symbol ?? '').replace('.T', '')

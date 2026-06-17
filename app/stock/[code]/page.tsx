@@ -59,7 +59,7 @@ export default async function StockPage({ params }: Props) {
   }
 
   const technical = calcTechnicalIndicators(stockPrices)
-  const score = calcScore(fin, technical)
+  const score = calcScore(fin, technical, historicalData)
   const decline = analyzeDecline(stockPrices, nikkeiPrices, fin)
   const exclusion = checkExclusion(fin)
   const investmentStyle = calcInvestmentStyle(fin, score)
@@ -95,7 +95,7 @@ export default async function StockPage({ params }: Props) {
         </div>
       </div>
 
-      {/* 業績推移（10年） */}
+      {/* 業績推移（直近最大5年） */}
       <HistoricalSection data={historicalData} />
 
       {/* IR・開示資料 */}

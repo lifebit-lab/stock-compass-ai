@@ -65,7 +65,10 @@ export const SCORE_DEFINITIONS: Record<string, MetricDefinition> = {
     definition: 'PERとPBRから株価の割安・割高度を評価します。満点10点。低いほど相対的に割安な水準です。',
   },
   technical: {
-    definition: 'トレンド・RSI・MACDの3指標から直近の株価動向を評価します。満点20点。直近の買いタイミング判断に使います。',
+    definition: 'トレンド・RSI・MACDの3指標から直近の株価動向を評価します。満点10点。直近の買いタイミング判断に使います。',
+  },
+  longTermStability: {
+    definition: 'Yahoo Financeから取得できる過去最大5年の業績から景気サイクルを通じた安定性を評価します。満点10点。赤字年数が少なく、最悪期でも利益を維持できた企業が高得点です。',
   },
 }
 

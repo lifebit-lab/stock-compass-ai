@@ -93,7 +93,8 @@ export function ScoreCard({ score, periodInfo }: Props) {
             <ScoreItem label="収益性" definitionKey="profitability" value={score.profitability} max={15} color="bg-purple-500" period={fp} />
             <ScoreItem label="株主還元" definitionKey="shareholder" value={score.shareholder} max={10} color="bg-pink-500" period={fp} />
             <ScoreItem label="割安性" definitionKey="valuation" value={score.valuation} max={10} color="bg-orange-500" period={fp} />
-            <ScoreItem label="テクニカル" definitionKey="technical" value={score.technical} max={20} color="bg-cyan-500" period={fp} />
+            <ScoreItem label="テクニカル" definitionKey="technical" value={score.technical} max={10} color="bg-cyan-500" period={fp} />
+            <ScoreItem label="長期安定性" definitionKey="longTermStability" value={score.longTermStability} max={10} color="bg-teal-500" />
           </div>
         </div>
       </CardContent>

@@ -40,13 +40,14 @@ export interface TechnicalIndicators {
 }
 
 export interface ScoreBreakdown {
-  financial: number    // 財務健全性（25点）
-  growth: number       // 成長性（20点）
-  profitability: number // 収益性（15点）
-  shareholder: number  // 株主還元（10点）
-  valuation: number    // 割安性（10点）
-  technical: number    // テクニカル（20点）
-  total: number        // 合計（100点）
+  financial: number         // 財務健全性（25点）
+  growth: number            // 成長性（20点）
+  profitability: number     // 収益性（15点）
+  shareholder: number       // 株主還元（10点）
+  valuation: number         // 割安性（10点）
+  technical: number         // テクニカル（10点）
+  longTermStability: number // 長期安定性（10点）
+  total: number             // 合計（100点）
 }
 
 export interface InvestmentStyle {

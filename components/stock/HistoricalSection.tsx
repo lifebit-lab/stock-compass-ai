@@ -22,7 +22,7 @@ export function HistoricalSection({ data }: Props) {
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <BarChart2 className="h-4 w-4 text-emerald-500" />
-            業績推移（直近10年）
+            業績推移（直近最大5年）
           </CardTitle>
           <div className="flex items-center gap-3">
             {view === 'table' && (

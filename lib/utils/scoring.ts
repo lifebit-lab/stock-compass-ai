@@ -1,4 +1,4 @@
-import type { FinancialData } from '@/types/stock'
+import type { FinancialData, HistoricalFinancialYear } from '@/types/stock'
 import type { ScoreBreakdown, TechnicalIndicators, InvestmentStyle } from '@/types/analysis'
 
 function clamp(value: number, min = 0, max = 100): number {
@@ -90,10 +90,6 @@ function calcShareholderScore(f: FinancialData): number {
   else if (f.payoutRatio > 50 && f.payoutRatio <= 70) score += 2
   else if (f.payoutRatio > 0 && f.payoutRatio < 20) score += 1
 
-  // 配当の安定性（減配なし）
-  const divHistory = f.dividendHistory
-  if (divHistory.length >= 2 && divHistory[0] >= divHistory[1]) score += 0 // 維持ボーナスは別項目
-
   return clamp(score, 0, 10)
 }
 
@@ -114,34 +110,66 @@ function calcValuationScore(f: FinancialData): number {
   return clamp(score, 0, 10)
 }
 
-// テクニカルスコア（20点満点）
+// テクニカルスコア（10点満点）
 function calcTechnicalScore(t: TechnicalIndicators): number {
   let score = 0
 
-  // トレンド（8点）
-  if (t.trend === 'up') score += 8
-  else if (t.trend === 'sideways') score += 4
+  // トレンド（4点）
+  if (t.trend === 'up') score += 4
+  else if (t.trend === 'sideways') score += 2
 
-  // RSI（6点）：30〜70が適正
-  if (t.rsi >= 30 && t.rsi <= 70) score += 6
-  else if (t.rsi < 30) score += 8 // 売られすぎ → 買いチャンス
-  else if (t.rsi > 70) score += 2 // 買われすぎ
+  // RSI（3点）：30〜70が適正
+  if (t.rsi >= 30 && t.rsi <= 70) score += 3
+  else if (t.rsi < 30) score += 4 // 売られすぎ → 買いチャンス
+  else if (t.rsi > 70) score += 1 // 買われすぎ
 
-  // MACD（6点）
+  // MACD（3点）
   const lastHistogram = t.macd.histogram.filter(v => !isNaN(v)).slice(-1)[0] ?? 0
-  if (lastHistogram > 0) score += 6
-  else if (lastHistogram === 0) score += 3
+  if (lastHistogram > 0) score += 3
+  else if (lastHistogram === 0) score += 1
 
-  return clamp(score, 0, 20)
+  return clamp(score, 0, 10)
 }
 
-export function calcScore(financial: FinancialData, technical: TechnicalIndicators): ScoreBreakdown {
+// 長期安定性スコア（10点満点）
+function calcLongTermStabilityScore(historicalData: HistoricalFinancialYear[]): number {
+  if (historicalData.length < 3) return 0
+
+  let score = 0
+
+  // 赤字年数（operatingIncome < 0）（6点）
+  const lossYears = historicalData.filter(
+    y => y.operatingIncome !== null && y.operatingIncome < 0
+  ).length
+  if (lossYears === 0) score += 6
+  else if (lossYears === 1) score += 3
+
+  // 過去の最悪営業利益率（4点）
+  const margins = historicalData
+    .map(y => y.operatingMargin)
+    .filter((m): m is number => m !== null)
+  if (margins.length > 0) {
+    const worstMargin = Math.min(...margins)
+    if (worstMargin >= 10) score += 4
+    else if (worstMargin >= 5) score += 2
+    else if (worstMargin >= 0) score += 1
+  }
+
+  return clamp(score, 0, 10)
+}
+
+export function calcScore(
+  financial: FinancialData,
+  technical: TechnicalIndicators,
+  historicalData: HistoricalFinancialYear[] = []
+): ScoreBreakdown {
   const fin = calcFinancialScore(financial)
   const growth = calcGrowthScore(financial)
   const profitability = calcProfitabilityScore(financial)
   const shareholder = calcShareholderScore(financial)
   const valuation = calcValuationScore(financial)
   const tech = calcTechnicalScore(technical)
+  const longTermStability = calcLongTermStabilityScore(historicalData)
 
   return {
     financial: fin,
@@ -150,7 +178,8 @@ export function calcScore(financial: FinancialData, technical: TechnicalIndicato
     shareholder,
     valuation,
     technical: tech,
-    total: fin + growth + profitability + shareholder + valuation + tech,
+    longTermStability,
+    total: fin + growth + profitability + shareholder + valuation + tech + longTermStability,
   }
 }
 

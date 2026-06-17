@@ -16,6 +16,7 @@ export function InfoTooltip({ definition, period }: Props) {
   const btnRef = useRef<HTMLButtonElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {

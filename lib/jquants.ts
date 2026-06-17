@@ -29,7 +29,6 @@ async function jquantsGet<T>(path: string, params?: Record<string, string>): Pro
 
 // 株価履歴を取得（直近300日）
 export async function getStockPrices(code: string): Promise<StockPrice[]> {
-  const to = new Date()
   const from = new Date()
   from.setDate(from.getDate() - 300)
 
@@ -78,7 +77,6 @@ export async function getCompanyInfo(code: string): Promise<CompanyInfo | null> 
 
 // 日経平均の直近データ取得（下落理由判定用）
 export async function getNikkeiPrices(): Promise<StockPrice[]> {
-  const to = new Date()
   const from = new Date()
   from.setDate(from.getDate() - 30)
   const fmt = (d: Date) => d.toISOString().split('T')[0]
