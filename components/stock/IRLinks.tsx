@@ -3,13 +3,12 @@ import { ExternalLink, FileText, Bell, Globe, BookOpen } from 'lucide-react'
 
 interface Props {
   code: string
-  companyName: string
   irWebsite?: string
 }
 
-export function IRLinks({ code, companyName, irWebsite }: Props) {
-  const edinetUrl = `https://disclosure.edinet-fsa.go.jp/search/?fullTextSearch=true&keyword=${encodeURIComponent(companyName)}`
-  const tdnetUrl = `https://www.release.tdnet.info/inbs/I_list_004_${code}00.html`
+export function IRLinks({ code, irWebsite }: Props) {
+  const edinetUrl = `https://disclosure2.edinet-fsa.go.jp/`
+  const tdnetUrl = `https://www.release.tdnet.info/`
 
   const shashiUrl = `https://the-shashi.com/tse/${code}/`
 
@@ -36,7 +35,8 @@ export function IRLinks({ code, companyName, irWebsite }: Props) {
       ? [{
           icon: Globe,
           label: 'IR公式サイト',
-          sub: irWebsite.replace(/^https?:\/\//, '').split('/')[0],
+          sub: irWebsite.replace(/^https?:\/\//, '').split('/')[0]
+            + (!irWebsite.includes('.co.jp') ? ' (グローバル)' : ''),
           href: irWebsite,
         }]
       : []),

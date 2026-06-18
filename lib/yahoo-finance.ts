@@ -161,6 +161,42 @@ export async function getHistoricalFinancials(
   }
 }
 
+export interface StockNewsItem {
+  title: string
+  publisher: string
+  link: string
+  publishedAt: string
+  sentiment: 'positive' | 'negative' | 'neutral'
+}
+
+/** 最新ニュースを取得（英語企業名でsearchして精度を上げる） */
+export async function getStockNews(stockCode: string): Promise<StockNewsItem[]> {
+  const { analyzeSentiment } = await import('./utils/sentiment')
+  try {
+    const yf = await getYF()
+    const ticker = `${stockCode}.T`
+
+    const sum = await yf.quoteSummary(ticker, { modules: ['price'] }) as AnyRecord
+    const shortName: string = sum.price?.shortName ?? sum.price?.longName ?? ''
+    if (!shortName) return []
+
+    const result = await yf.search(shortName, { newsCount: 5 }) as AnyRecord
+    const items: AnyRecord[] = result.news ?? []
+
+    return items.map(item => ({
+      title: String(item.title ?? ''),
+      publisher: String(item.publisher ?? ''),
+      link: String(item.link ?? ''),
+      publishedAt: item.providerPublishTime
+        ? new Date(item.providerPublishTime).toISOString()
+        : new Date().toISOString(),
+      sentiment: analyzeSentiment(String(item.title ?? '')),
+    }))
+  } catch {
+    return []
+  }
+}
+
 /** IR公式サイトURLを取得 */
 export async function getIRWebsite(stockCode: string): Promise<string | undefined> {
   try {

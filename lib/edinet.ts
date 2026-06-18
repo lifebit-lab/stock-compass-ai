@@ -40,7 +40,7 @@ export async function getFinancialFromJQuants(code: string): Promise<FinancialDa
     `https://api.jquants.com/v2/fins/summary?code=${code}`,
     {
       headers: { 'x-api-key': apiKey },
-      next: { revalidate: 86400 },
+      next: { revalidate: 3600 },
     }
   )
 
