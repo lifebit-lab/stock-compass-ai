@@ -11,9 +11,9 @@ import { TechnicalChartWrapper } from '@/components/stock/TechnicalChartWrapper'
 import { HistoricalSection } from '@/components/stock/HistoricalSection'
 import { IRLinks } from '@/components/stock/IRLinks'
 import { NewsSection } from '@/components/stock/NewsSection'
-import { getStockPrices, getCompanyInfo, getNikkeiPrices } from '@/lib/jquants'
+import { getCompanyInfo } from '@/lib/jquants'
 import { getFinancialData } from '@/lib/edinet'
-import { getHistoricalFinancials, getIRWebsite, getStockNews } from '@/lib/yahoo-finance'
+import { getHistoricalFinancials, getIRWebsite, getStockNews, getStockPricesFromYahoo, getNikkeiPricesFromYahoo } from '@/lib/yahoo-finance'
 import { calcTechnicalIndicators } from '@/lib/utils/technical'
 import { calcScore, calcInvestmentStyle } from '@/lib/utils/scoring'
 import { analyzeDecline, checkExclusion } from '@/lib/utils/decline-rule'
@@ -36,10 +36,10 @@ export default async function StockPage({ params }: Props) {
   if (!/^\d{4}$/.test(code)) notFound()
 
   const [stockPrices, companyInfo, financial, nikkeiPrices, historicalData, irWebsite, news] = await Promise.all([
-    getStockPrices(code).catch(() => []),
+    getStockPricesFromYahoo(code).catch(() => []),
     getCompanyInfo(code).catch(() => null),
     getFinancialData(code).catch(() => null),
-    getNikkeiPrices().catch(() => []),
+    getNikkeiPricesFromYahoo().catch(() => []),
     getHistoricalFinancials(code).catch(() => []),
     getIRWebsite(code).catch(() => undefined),
     getStockNews(code).catch(() => []),

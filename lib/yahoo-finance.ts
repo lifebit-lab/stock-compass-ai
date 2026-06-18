@@ -1,4 +1,4 @@
-import type { FinancialData } from '@/types/stock'
+import type { FinancialData, StockPrice } from '@/types/stock'
 
 function n(v: unknown): number {
   return typeof v === 'number' ? v : 0
@@ -234,4 +234,74 @@ export async function getBatchQuotes(
   }
 
   return result
+}
+
+type YFHistoricalRow = {
+  date: Date
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+  adjClose: number | null
+}
+
+/** 株価履歴を取得（直近300日・Yahoo Finance経由で当日〜前日データまで対応） */
+export async function getStockPricesFromYahoo(stockCode: string): Promise<StockPrice[]> {
+  const from = new Date()
+  from.setDate(from.getDate() - 300)
+
+  try {
+    const yf = await getYF()
+    const data = await yf.historical(`${stockCode}.T`, {
+      period1: from.toISOString().split('T')[0],
+      interval: '1d',
+    }) as YFHistoricalRow[]
+
+    return data
+      .filter(d => d.close > 0)
+      .map(d => ({
+        date: d.date.toISOString().split('T')[0],
+        open: d.open,
+        high: d.high,
+        low: d.low,
+        close: d.close,
+        volume: d.volume,
+        adjustedClose: d.adjClose ?? d.close,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+  } catch (e) {
+    console.error('[yahoo-finance] getStockPricesFromYahoo error for', stockCode, ':', e)
+    return []
+  }
+}
+
+/** 日経225の直近データ取得（下落理由判定用） */
+export async function getNikkeiPricesFromYahoo(): Promise<StockPrice[]> {
+  const from = new Date()
+  from.setDate(from.getDate() - 30)
+
+  try {
+    const yf = await getYF()
+    const data = await yf.historical('^N225', {
+      period1: from.toISOString().split('T')[0],
+      interval: '1d',
+    }) as YFHistoricalRow[]
+
+    return data
+      .filter(d => d.close > 0)
+      .map(d => ({
+        date: d.date.toISOString().split('T')[0],
+        open: d.open,
+        high: d.high,
+        low: d.low,
+        close: d.close,
+        volume: d.volume ?? 0,
+        adjustedClose: d.adjClose ?? d.close,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+  } catch (e) {
+    console.error('[yahoo-finance] getNikkeiPricesFromYahoo error:', e)
+    return []
+  }
 }
