@@ -237,7 +237,7 @@ export async function getBatchQuotes(
 }
 
 type YFChartQuote = {
-  date: string
+  date: Date
   open: number
   high: number
   low: number
@@ -250,7 +250,7 @@ function chartQuotesToStockPrices(quotes: YFChartQuote[]): StockPrice[] {
   return quotes
     .filter(d => d.close > 0)
     .map(d => ({
-      date: d.date.slice(0, 10),
+      date: d.date.toISOString().slice(0, 10),
       open: d.open,
       high: d.high,
       low: d.low,
