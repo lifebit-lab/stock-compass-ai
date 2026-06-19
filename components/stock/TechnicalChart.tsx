@@ -45,8 +45,8 @@ function toMonthDay(compact: string): string {
 }
 
 export function TechnicalChart({ prices, technical }: Props) {
-  // 直近75件に絞る
-  const recent = prices.slice(-75)
+  // 直近252件（約1年）に絞る
+  const recent = prices.slice(-252)
   const offset = prices.length - recent.length
 
   // チャートに表示する期間ラベルを生成（年付き）

@@ -264,7 +264,7 @@ function chartQuotesToStockPrices(quotes: YFChartQuote[]): StockPrice[] {
 /** 株価履歴を取得（直近300日・Yahoo Finance chart() 経由で前営業日データまで対応） */
 export async function getStockPricesFromYahoo(stockCode: string): Promise<StockPrice[]> {
   const from = new Date()
-  from.setDate(from.getDate() - 300)
+  from.setDate(from.getDate() - 400)
 
   try {
     const yf = await getYF()
