@@ -1,16 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ExternalLink, FileText, Bell, Globe, BookOpen } from 'lucide-react'
+import { ExternalLink, FileText, Bell, Globe } from 'lucide-react'
 
 interface Props {
-  code: string
   irWebsite?: string
 }
 
-export function IRLinks({ code, irWebsite }: Props) {
+export function IRLinks({ irWebsite }: Props) {
   const edinetUrl = `https://disclosure2.edinet-fsa.go.jp/`
   const tdnetUrl = `https://www.release.tdnet.info/`
-
-  const shashiUrl = `https://the-shashi.com/tse/${code}/`
 
   const links = [
     {
@@ -24,12 +21,6 @@ export function IRLinks({ code, irWebsite }: Props) {
       label: '適時開示情報',
       sub: 'TDnet',
       href: tdnetUrl,
-    },
-    {
-      icon: BookOpen,
-      label: '企業の歴史を読む',
-      sub: 'The社史',
-      href: shashiUrl,
     },
     ...(irWebsite
       ? [{

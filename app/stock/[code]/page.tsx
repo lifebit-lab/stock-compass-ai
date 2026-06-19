@@ -106,7 +106,7 @@ export default async function StockPage({ params }: Props) {
       <NewsSection news={news} />
 
       {/* IR・開示資料 */}
-      <IRLinks code={code} irWebsite={irWebsite} />
+      <IRLinks irWebsite={irWebsite} />
     </div>
   )
 }
